@@ -1,11 +1,11 @@
-import { type GameState, type Mode, type Step, gameStateSchema } from "@fep/protocol/slot";
+import { type GameState, gameStateSchema, type Mode, type Step } from "@fep/protocol/slot";
 
 /** A played (or restored) step, normalized for game-core. `state` is the game specific part for HUD and renderer. */
 export interface Round<S> {
-  state: S;
-  nextStep: Step;
-  mode: Mode;
-  totalWin: string;
+    state: S;
+    nextStep: Step;
+    mode: Mode;
+    totalWin: string;
 }
 
 /**
@@ -13,13 +13,13 @@ export interface Round<S> {
  * ship their own; game-specific shapes never leak into game-core.
  */
 export interface StateAdapter<S> {
-  parse(raw: unknown): Round<S>;
+    parse(raw: unknown): Round<S>;
 }
 
 /** Adapter for games that use the standard state shape. */
 export const standardStateAdapter: StateAdapter<GameState> = {
-  parse(raw) {
-    const state = gameStateSchema.parse(raw);
-    return { state, nextStep: state.nextStep, mode: state.mode, totalWin: state.totalWin };
-  },
+    parse(raw) {
+        const state = gameStateSchema.parse(raw);
+        return { state, nextStep: state.nextStep, mode: state.mode, totalWin: state.totalWin };
+    },
 };

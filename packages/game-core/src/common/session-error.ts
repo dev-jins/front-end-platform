@@ -5,10 +5,10 @@ import { type ErrorLevel, GameApiError } from "@fep/protocol";
  * CRITICAL → session-over screen · ALERT → dialog, player can retry · WARNING → logged only.
  */
 export interface SessionError {
-  /** API error code, null when the failure did not come from the API (network, invalid response). */
-  code: number | null;
-  level: ErrorLevel;
-  message: string;
+    /** API error code, null when the failure did not come from the API (network, invalid response). */
+    code: number | null;
+    level: ErrorLevel;
+    message: string;
 }
 
 /**
@@ -17,9 +17,9 @@ export interface SessionError {
  * Reloading recovers safely (init restores `lastSpin`).
  */
 export function toSessionError(error: unknown): SessionError {
-  if (error instanceof GameApiError && error.detail.kind === "business") {
-    const { code, level, message } = error.detail;
-    return { code, level, message };
-  }
-  return { code: null, level: "CRITICAL", message: error instanceof Error ? error.message : String(error) };
+    if (error instanceof GameApiError && error.detail.kind === "business") {
+        const { code, level, message } = error.detail;
+        return { code, level, message };
+    }
+    return { code: null, level: "CRITICAL", message: error instanceof Error ? error.message : String(error) };
 }

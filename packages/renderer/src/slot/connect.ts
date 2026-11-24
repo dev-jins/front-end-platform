@@ -1,14 +1,13 @@
-import type { StoreApi } from "zustand/vanilla";
-
 import type { SlotState } from "@fep/game-core/slot";
 import type { GameState } from "@fep/protocol/slot";
+import type { StoreApi } from "zustand/vanilla";
 
 import { reelColumns } from "./win-lines.js";
 
 /** What the store binding needs from a scene. */
 export interface SpinView {
-  startSpin(): void;
-  stopOn(columns: string[][]): Promise<void>;
+    startSpin(): void;
+    stopOn(columns: string[][]): Promise<void>;
 }
 
 /**
@@ -18,11 +17,11 @@ export interface SpinView {
  * Returns the unsubscribe function.
  */
 export function connectSpinView(store: StoreApi<SlotState<GameState>>, view: SpinView): () => void {
-  return store.subscribe((state, previous) => {
-    if (state.phase === previous.phase) return;
-    if (state.phase === "requesting") view.startSpin();
-    else if (previous.phase === "requesting" && state.phase !== "presenting" && state.displayed) {
-      void view.stopOn(reelColumns(state.displayed.state.reels));
-    }
-  });
+    return store.subscribe((state, previous) => {
+        if (state.phase === previous.phase) return;
+        if (state.phase === "requesting") view.startSpin();
+        else if (previous.phase === "requesting" && state.phase !== "presenting" && state.displayed) {
+            void view.stopOn(reelColumns(state.displayed.state.reels));
+        }
+    });
 }

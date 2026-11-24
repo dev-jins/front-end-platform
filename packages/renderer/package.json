@@ -1,26 +1,26 @@
 {
-  "name": "@fep/renderer",
-  "version": "0.0.1",
-  "private": true,
-  "type": "module",
-  "exports": {
-    "./slot": {
-      "types": "./src/slot/index.ts",
-      "import": "./src/slot/index.ts",
-      "default": "./src/slot/index.ts"
+    "name": "@fep/renderer",
+    "version": "0.0.1",
+    "private": true,
+    "type": "module",
+    "exports": {
+        "./slot": {
+            "types": "./src/slot/index.ts",
+            "import": "./src/slot/index.ts",
+            "default": "./src/slot/index.ts"
+        },
+        "./package.json": "./package.json"
     },
-    "./package.json": "./package.json"
-  },
-  "nx": {
-    "name": "renderer",
-    "tags": [
-      "type:renderer"
-    ]
-  },
-  "dependencies": {
-    "@fep/game-core": "workspace:*",
-    "@fep/protocol": "workspace:*",
-    "pixi.js": "8.23.0",
-    "zustand": "5.1.0"
-  }
+    "nx": {
+        "name": "renderer",
+        "tags": [
+            "type:renderer"
+        ]
+    },
+    "dependencies": {
+        "@fep/game-core": "workspace:*",
+        "@fep/protocol": "workspace:*",
+        "pixi.js": "8.23.0",
+        "zustand": "5.1.0"
+    }
 }

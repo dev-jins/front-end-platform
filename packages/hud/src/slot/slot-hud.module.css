@@ -1,114 +1,114 @@
 .hud {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 24px;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  background: linear-gradient(transparent, rgb(0 0 0 / 70%));
-  color: #f8fafc;
-  font-family: system-ui, sans-serif;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: linear-gradient(transparent, rgb(0 0 0 / 70%));
+    color: #f8fafc;
+    font-family: system-ui, sans-serif;
 }
 
 .stat {
-  display: grid;
-  justify-items: center;
-  min-width: 96px;
-  font-size: 18px;
-  font-variant-numeric: tabular-nums;
+    display: grid;
+    justify-items: center;
+    min-width: 96px;
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
 }
 
 .label {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  opacity: 0.7;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.7;
 }
 
 .bet {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .hud button,
 .dialog button {
-  border: 0;
-  border-radius: 999px;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
+    border: 0;
+    border-radius: 999px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
 }
 
 .hud button:disabled {
-  opacity: 0.45;
-  cursor: default;
+    opacity: 0.45;
+    cursor: default;
 }
 
 .bet button {
-  width: 40px;
-  height: 40px;
-  font-size: 22px;
-  background: #334155;
-  color: #f8fafc;
+    width: 40px;
+    height: 40px;
+    font-size: 22px;
+    background: #334155;
+    color: #f8fafc;
 }
 
 .spin {
-  padding: 14px 40px;
-  font-size: 20px;
-  background: #22c55e;
-  color: #052e16;
+    padding: 14px 40px;
+    font-size: 20px;
+    background: #22c55e;
+    color: #052e16;
 }
 
 .buy {
-  padding: 10px 20px;
-  background: #f59e0b;
-  color: #451a03;
+    padding: 10px 20px;
+    background: #f59e0b;
+    color: #451a03;
 }
 
 .hud button:focus-visible,
 .dialog button:focus-visible {
-  outline: 3px solid #fde047;
-  outline-offset: 2px;
+    outline: 3px solid #fde047;
+    outline-offset: 2px;
 }
 
 .backdrop {
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 16px;
-  background: rgb(0 0 0 / 60%);
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: rgb(0 0 0 / 60%);
 }
 
 .dialog {
-  display: grid;
-  gap: 12px;
-  max-width: 360px;
-  padding: 24px;
-  border-radius: 12px;
-  background: #1e293b;
-  color: #f8fafc;
-  text-align: center;
-  font-family: system-ui, sans-serif;
+    display: grid;
+    gap: 12px;
+    max-width: 360px;
+    padding: 24px;
+    border-radius: 12px;
+    background: #1e293b;
+    color: #f8fafc;
+    text-align: center;
+    font-family: system-ui, sans-serif;
 }
 
 .dialog h2 {
-  margin: 0;
-  font-size: 20px;
+    margin: 0;
+    font-size: 20px;
 }
 
 .dialog p {
-  margin: 0;
+    margin: 0;
 }
 
 .dialog button {
-  justify-self: center;
-  padding: 10px 32px;
-  background: #22c55e;
-  color: #052e16;
+    justify-self: center;
+    padding: 10px 32px;
+    background: #22c55e;
+    color: #052e16;
 }

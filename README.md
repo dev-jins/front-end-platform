@@ -199,12 +199,13 @@ BREAKING CHANGE: `theme.tokens` now extends the base theme instead of replacing 
 Javascript and Typescript give developers a lot of latitude in how they write code. We want to leverage that without
 sacrificing style consistency, which is why formatting is automated.
 
-- We use [prettier](https://prettier.io) — if Prettier is happy, the code is formatted correctly
-- Semicolons required, double quotes, print width 120, ES5 trailing commas
-- Imports are sorted by `@trivago/prettier-plugin-sort-imports` (external → `@fep/*` → relative)
-- `lint-staged` formats staged files on the `pre-commit` hook
-- Install `prettier` as your editor plugin and enable format on save
-- `bun run format` formats the workspace; `bun nx format:check` verifies it
+- We use [Biome](https://biomejs.dev) (`biome.json`) — if Biome is happy, the code is formatted correctly
+- 4-space indent, semicolons required, double quotes, line width 120, ES5 trailing commas
+- Imports are sorted by Biome's `organizeImports` assist
+- Biome also lints (recommended preset + React domain); ESLint stays for Nx module boundaries
+- `lint-staged` runs `biome check --write` on staged files on the `pre-commit` hook
+- Install the Biome editor plugin and enable format on save
+- `bun run format` formats and fixes the workspace; `bun run format:check` verifies it
 
 ### Linting
 
