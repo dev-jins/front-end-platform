@@ -22,7 +22,7 @@ front-end-platform/
 │   └── games/
 │       └── gameone    # Vite + React game client (port 4300) — config, atlases, Spine, adapter
 ├── packages/
-│   ├── protocol       # canonical Zod schemas + GameTransport (@fep/protocol)
+│   ├── protocol       # Zod schemas + transports: common (`@fep/protocol`) and per game family (`@fep/protocol/slot`)
 │   ├── game-core      # session, fingerprint, nextStep loop, error policy — plain TS (@fep/game-core)
 │   ├── renderer       # PixiJS reels, win lines, big win — plain TS, no React (@fep/renderer)
 │   ├── hud            # React HUD: bet panel, balance, popups (@fep/hud)
