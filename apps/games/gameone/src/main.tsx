@@ -2,11 +2,12 @@ import { StrictMode } from "react";
 import * as ReactDOM from "react-dom/client";
 
 import App from "./app/app";
+import { bootGame } from "./game";
 
-const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
-
-root.render(
-  <StrictMode>
-    <App />
-  </StrictMode>
+void bootGame(document.getElementById("game") as HTMLElement).then((session) =>
+  ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+    <StrictMode>
+      <App session={session} />
+    </StrictMode>
+  )
 );

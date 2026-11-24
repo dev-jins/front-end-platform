@@ -124,7 +124,7 @@ apps/
 └── games/
     └── gameone/        # one app per game: config, atlases, Spine, adapter
 packages/
-├── protocol/           # canonical Zod schemas + GameTransport
+├── protocol/           # Zod schemas + transports: common (`@fep/protocol`) and per game family (`@fep/protocol/slot`)
 ├── game-core/          # session, fingerprint, nextStep loop, error policy (no React)
 ├── renderer/           # PixiJS reels, win lines, big win (no React)
 ├── hud/                # React HUD components

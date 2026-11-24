@@ -11,6 +11,16 @@
       "import": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./slot": {
+      "types": "./src/slot/index.ts",
+      "import": "./src/slot/index.ts",
+      "default": "./src/slot/index.ts"
+    },
+    "./testing": {
+      "types": "./tests/doc-examples.ts",
+      "import": "./tests/doc-examples.ts",
+      "default": "./tests/doc-examples.ts"
+    },
     "./package.json": "./package.json"
   },
   "nx": {
@@ -19,5 +29,7 @@
       "type:protocol"
     ]
   },
-  "dependencies": {}
+  "dependencies": {
+    "zod": "^4.6.7"
+  }
 }

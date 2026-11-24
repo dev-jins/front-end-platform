@@ -1,0 +1,510 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Front-end Platform Build Log</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+  /* Layout: engineering change log — sticky contents rail on wide screens, one reading column, tables and diagrams scroll inside their own boxes. */
+  :root {
+    --bg: #f6f7f5;
+    --surface: #ffffff;
+    --fg: #17201c;
+    --muted: #5b6862;
+    --line: #dde3df;
+    --accent: #0f7a5a;
+    --accent-soft: #e2f2ea;
+    --warn: #a15c07;
+    --warn-soft: #fbefdc;
+    --bad: #b42318;
+    --code-bg: #eef1ef;
+    --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+    --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101513; --surface: #161d1a; --fg: #e6ece9; --muted: #95a39c; --line: #26302c;
+      --accent: #4cc79a; --accent-soft: #15342a; --warn: #f0b45a; --warn-soft: #36290f; --bad: #f27a6e;
+      --code-bg: #1c2420; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #101513; --surface: #161d1a; --fg: #e6ece9; --muted: #95a39c; --line: #26302c;
+    --accent: #4cc79a; --accent-soft: #15342a; --warn: #f0b45a; --warn-soft: #36290f; --bad: #f27a6e;
+    --code-bg: #1c2420; color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 16px/1.65 var(--font-body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .shell {
+    max-width: 1180px; margin: 0 auto; padding-block: 40px 80px;
+    display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px;
+  }
+  @media (max-width: 900px) { .shell { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-block: 24px 56px; } }
+
+  nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 14px; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  nav.toc a { display: block; padding: 4px 10px; border-radius: 6px; color: var(--muted); text-decoration: none; }
+  nav.toc a:hover, nav.toc a:focus-visible { background: var(--accent-soft); color: var(--fg); }
+  @media (max-width: 900px) {
+    nav.toc { position: static; }
+    nav.toc ol { display: flex; flex-wrap: wrap; gap: 6px; }
+    nav.toc a { border: 1px solid var(--line); }
+  }
+
+  main { min-width: 0; display: grid; gap: 56px; }
+  section { display: grid; gap: 16px; min-width: 0; scroll-margin-top: 24px; }
+  h1, h2, h3 { font-family: var(--font-display); line-height: 1.2; margin: 0; text-wrap: balance; }
+  h1 { font-size: clamp(30px, 4.5vw, 44px); font-weight: 700; letter-spacing: -0.01em; }
+  h2 { font-size: 26px; font-weight: 600; padding-top: 8px; border-top: 1px solid var(--line); }
+  h3 { font-size: 18px; font-weight: 600; margin-top: 8px; }
+  p, li { max-width: 72ch; }
+  p { margin: 0; }
+  ul, ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
+  a { color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  code { font-family: var(--font-mono); font-size: 0.88em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+  pre { margin: 0; }
+  pre.code {
+    font: 13.5px/1.55 var(--font-mono); background: var(--code-bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 14px 16px; overflow-x: auto;
+  }
+  pre.code code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+
+  .eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+  .lede { font-size: 18px; color: var(--muted); max-width: 68ch; }
+
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .fact { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 2px; }
+  .fact b { font: 600 26px/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+  .fact span { font-size: 13px; color: var(--muted); }
+
+  .callout { border-radius: 10px; padding: 14px 16px; display: grid; gap: 6px; border: 1px solid var(--line); background: var(--surface); }
+  .callout.warn { background: var(--warn-soft); border-color: transparent; }
+  .callout.warn strong { color: var(--warn); }
+  .callout.ok { background: var(--accent-soft); border-color: transparent; }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: 0; }
+  th { font: 500 12px/1.3 var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); white-space: nowrap; }
+  td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .pill { display: inline-block; font: 500 12px/1.6 var(--font-mono); padding: 0 8px; border-radius: 999px; white-space: nowrap; }
+  .pill.done { background: var(--accent-soft); color: var(--accent); }
+  .pill.wait { background: var(--warn-soft); color: var(--warn); }
+  .pill.crit { color: var(--bad); border: 1px solid currentColor; }
+  .pill.alert { color: var(--warn); border: 1px solid currentColor; }
+  .pill.warnlvl { color: var(--muted); border: 1px solid currentColor; }
+
+  .diagram { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; overflow-x: auto; }
+  .diagram pre.mermaid { background: none; text-align: center; }
+
+  .stack { display: grid; gap: 10px; }
+  .stack-row { display: grid; grid-template-columns: 82px minmax(0, 1fr) auto; gap: 14px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; }
+  .stack-row .sha { font: 500 14px var(--font-mono); color: var(--accent); }
+  .stack-row .msg { min-width: 0; display: grid; gap: 2px; }
+  .stack-row .msg small { color: var(--muted); font-family: var(--font-mono); font-size: 12.5px; overflow-wrap: anywhere; }
+  @media (max-width: 560px) { .stack-row { grid-template-columns: minmax(0, 1fr); gap: 4px; } }
+
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="shell">
+  <nav class="toc" aria-label="Contents">
+    <ol>
+      <li><a href="#summary">Summary</a></li>
+      <li><a href="#branches">Commits &amp; branches</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#workspace">Workspace setup</a></li>
+      <li><a href="#protocol">protocol</a></li>
+      <li><a href="#game-core">game-core</a></li>
+      <li><a href="#renderer">renderer</a></li>
+      <li><a href="#gameone">gameone app</a></li>
+      <li><a href="#hud">hud</a></li>
+      <li><a href="#verification">Verification</a></li>
+      <li><a href="#decisions">Open decisions</a></li>
+      <li><a href="#next">Not built yet</a></li>
+      <li><a href="#run">How to run</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <section id="summary">
+      <span class="eyebrow">front-end-platform · 24 Nov 2026</span>
+      <h1>Front-end Platform build log</h1>
+      <p class="lede">From an empty repo with five design docs to a working slot game client: an Nx + bun monorepo, the Game Front API contract in Zod, a framework-free game session, PixiJS reels and a React HUD. A full spin cycle runs end to end in the browser against a dev mock backend.</p>
+      <div class="facts">
+        <div class="fact"><b>5</b><span>commits</span></div>
+        <div class="fact"><b>4</b><span>packages built</span></div>
+        <div class="fact"><b>77</b><span>tests, all passing</span></div>
+        <div class="fact"><b>~1,800</b><span>lines of source</span></div>
+        <div class="fact"><b>≥ 80%</b><span>coverage floor, enforced</span></div>
+      </div>
+      <div class="callout warn">
+        <strong>Not pushed yet</strong>
+        <p>Pushing the four feature branches was blocked by the session's permission rules. The branches are committed locally and the four pull-request descriptions are written. See <a href="#branches">Commits &amp; branches</a> for the commands to run.</p>
+      </div>
+    </section>
+
+    <section id="branches">
+      <h2>Commits &amp; branches</h2>
+      <p>The packages depend on each other in a chain, so the work is four stacked branches. Each one is based on the previous one and should be merged in this order. Every commit passed the pre-commit hook (Prettier through lint-staged) and the commit-msg hook (commitlint).</p>
+      <div class="stack">
+        <div class="stack-row"><span class="sha">03cf7b6</span><div class="msg"><b>feat(lobby): init the project</b><small>main · workspace scaffold, 111 files</small></div><span class="pill done">on origin</span></div>
+        <div class="stack-row"><span class="sha">f6d4c2a</span><div class="msg"><b>feat(protocol): add slot api schemas and http transport</b><small>ech/feat/protocol-schemas → main · +792 −20</small></div><span class="pill wait">local</span></div>
+        <div class="stack-row"><span class="sha">7a12aa3</span><div class="msg"><b>feat(game-core): add slot session with nextStep loop</b><small>ech/feat/game-core-session → protocol-schemas · +694 −18</small></div><span class="pill wait">local</span></div>
+        <div class="stack-row"><span class="sha">805b884</span><div class="msg"><b>feat(renderer): add slot reels scene and wire gameone</b><small>ech/feat/renderer-reels → game-core-session · +1155 −43</small></div><span class="pill wait">local</span></div>
+        <div class="stack-row"><span class="sha">379c6c4</span><div class="msg"><b>feat(hud): add slot hud with exact money formatting</b><small>ech/feat/hud-slot → renderer-reels · +598 −203</small></div><span class="pill wait">local</span></div>
+      </div>
+      <p>The repo's convention is to never branch from a feature branch. Stacking was the only way to build on unmerged work, so after each PR merges, retarget the next one onto <code>main</code>.</p>
+      <h3>Commands to push and open the PRs</h3>
+<pre class="code"><code>git push -u origin ech/feat/protocol-schemas ech/feat/game-core-session \
+  ech/feat/renderer-reels ech/feat/hud-slot
+
+gh pr create --base main                       --head ech/feat/protocol-schemas  --title "feat(protocol): add slot api schemas and http transport" --body-file 1-protocol.md
+gh pr create --base ech/feat/protocol-schemas  --head ech/feat/game-core-session --title "feat(game-core): add slot session with nextStep loop"   --body-file 2-game-core.md
+gh pr create --base ech/feat/game-core-session --head ech/feat/renderer-reels    --title "feat(renderer): add slot reels scene and wire gameone" --body-file 3-renderer.md
+gh pr create --base ech/feat/renderer-reels    --head ech/feat/hud-slot          --title "feat(hud): add slot hud with exact money formatting"    --body-file 4-hud.md</code></pre>
+    </section>
+
+    <section id="architecture">
+      <h2>Architecture</h2>
+      <p>This follows <code>docs/frontend-architecture.html</code>. Dependencies point down only. React and Pixi never call the API: they read the game-core store and send intents. Each layer is an Nx tag, and <code>@nx/enforce-module-boundaries</code> fails lint on an upward import. That was tested by making <code>game-core</code> import <code>hud</code>, which lint rejected.</p>
+      <div class="diagram">
+<pre class="mermaid">
+flowchart TD
+  app["apps/games/gameone<br/>type:app"]
+  hud["@fep/hud<br/>type:ui · React"]
+  renderer["@fep/renderer<br/>type:renderer · PixiJS v8"]
+  core["@fep/game-core<br/>type:core · plain TS + zustand/vanilla"]
+  protocol["@fep/protocol<br/>type:protocol · Zod"]
+  api[("Game Front API<br/>/api/v1")]
+  app --> hud
+  app --> renderer
+  hud --> core
+  renderer --> core
+  core --> protocol
+  protocol -. HTTP .-> api
+</pre>
+      </div>
+      <p>Every package is split by <strong>game family</strong>. Shared code sits at the package root (<code>@fep/protocol</code>, <code>@fep/game-core</code>) and slot code under <code>/slot</code>. A crash-game family, which would use sockets and a round stream, can be added as <code>/crash</code> without touching slots. One family never imports another.</p>
+    </section>
+
+    <section id="workspace">
+      <h2>Workspace setup</h2>
+      <p>The workspace was scaffolded with <code>create-nx-workspace</code> (Nx 24, TypeScript preset). The package manager is bun, as you asked mid-setup, replacing the default pnpm.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Area</th><th>Choice</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Build</td><td>Nx 24, Vite 8, bun 1.2, TypeScript 6 strict</td><td>The architecture doc specifies Nx + Vite. The doc's "same tooling as FreedX MFE" line set the remaining defaults.</td></tr>
+          <tr><td>Format</td><td>Prettier: double quotes, semicolons, width 120, ES5 commas, import sorting</td><td>Copied from the FreedX MFE code-style convention in your vault.</td></tr>
+          <tr><td>Lint</td><td>ESLint 9 flat config with module-boundary tag rules</td><td>Enforces the doc's "dependencies point down only" rule mechanically.</td></tr>
+          <tr><td>Commits</td><td>Husky, commitlint, lint-staged</td><td>Conventional Commits, scopes = project names, subject ≤ 64 characters.</td></tr>
+          <tr><td>Tests</td><td>Vitest 5 + React Testing Library, 80% thresholds in every project config</td><td>Your standard coverage floor; <code>--coverage</code> fails below it.</td></tr>
+          <tr><td>Projects</td><td><code>lobby</code>, <code>gameone</code>, <code>protocol</code>, <code>game-core</code>, <code>renderer</code>, <code>hud</code>, <code>lobby-kit</code>, <code>i18n</code></td><td>The layout from the doc's §4. <code>renderer</code> was regenerated as a plain TS library because the doc keeps Pixi out of React.</td></tr>
+        </tbody>
+      </table></div>
+      <h3>Removed from the generator output</h3>
+      <ul>
+        <li>Config folders for other AI tools (<code>.cursor</code>, <code>.gemini</code>, <code>.codex</code>, <code>.opencode</code>, <code>.agents</code>).</li>
+        <li>A CI workflow wired to npm and paid Nx Cloud agents.</li>
+        <li>A <code>.claude/settings.json</code> that added an Nx plugin marketplace and allowed a Google Analytics domain.</li>
+      </ul>
+      <p><code>README.md</code> and <code>CLAUDE.md</code> were later rewritten to follow the FreedX MFE files' structure, stating only what is true in this repo. Each tech-stack row is marked installed or planned.</p>
+    </section>
+
+    <section id="protocol">
+      <h2>protocol: the API contract</h2>
+      <p>Zod schemas, error mapping and the HTTP transport for the Game Front API. Types come from <code>z.infer</code>, so the schema and the type can't drift apart.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Entry point</th><th>Contents</th></tr></thead>
+        <tbody>
+          <tr><td><code>@fep/protocol</code></td><td><code>numericStringSchema</code>, balance, error levels and the three error-body shapes, <code>GameApiError</code>, <code>toGameApiError</code>, <code>ERROR_CODE</code> (1, 3, 4, 9, 109, 111, 112, 140, 300), tournaments and both popups</td></tr>
+          <tr><td><code>@fep/protocol/slot</code></td><td>Init response, standard <code>GameState</code>, action wrapper, <code>SLOT_ERROR_CODE</code> (100–108, 110, 115), <code>SlotTransport</code>, <code>createSlotHttpTransport</code></td></tr>
+          <tr><td><code>@fep/protocol/testing</code></td><td><code>docExamples(heading)</code>: the JSON examples parsed straight out of the API markdown</td></tr>
+        </tbody>
+      </table></div>
+      <h3>API traps the schemas handle</h3>
+      <ul>
+        <li><strong>Money is a numeric string.</strong> A number is rejected, so a float never enters the client.</li>
+        <li><strong><code>bets[]</code> items arrive as numbers or strings,</strong> depending on the operator. They are normalised to strings.</li>
+        <li><strong><code>extra</code> is <code>[]</code> outside freespin and bonus modes,</strong> not an object, so the schema accepts either an empty tuple or the freespin object.</li>
+        <li><strong>Tournament <code>userData.place</code> can be the string <code>"-"</code>.</strong></li>
+        <li><strong>Init can report an error inside its HTTP 200</strong> (codes 109, 111, 300). In that case the tournament fields are absent.</li>
+        <li><strong><code>socials</code> has two shapes:</strong> <code>{nickname}</code> or <code>{needToRequestNickname}</code>.</li>
+      </ul>
+      <h3>Why game state stays unparsed</h3>
+      <p>Seven games (Space Infinity, Fruit Storm, Shootland, Dark Portal, TapTap, Pinball Inferno, Mystic Gates/Charmana) replace or drop standard state fields. Typing the state as one interface would be wrong for them. So <code>init().lastSpin</code> is <code>unknown</code> and <code>action()</code> returns raw JSON, and each game's adapter parses its own state. Standard games use <code>standardActionResponseSchema</code>.</p>
+      <h3>Transport</h3>
+      <ul>
+        <li>One transport per session. It percent-encodes the session key (keys contain <code>$</code> and <code>/</code>).</li>
+        <li>It is stateless: it does not hold the fingerprint, which belongs to <code>game-core</code>.</li>
+        <li>Non-2xx responses become <code>GameApiError</code> with <code>detail.kind</code> set to <code>business</code> (422), <code>validation</code> (400), <code>parse</code> (422 <code>{error}</code>), <code>not-found</code> (404) or <code>unexpected</code>.</li>
+        <li>The default <code>fetch</code> is wrapped, so the browser never calls it unbound (which throws "Illegal invocation").</li>
+      </ul>
+      <div class="callout ok"><p><strong>Contract tests from the doc.</strong> The tests read the JSON examples straight from <code>docs/Test Game Front API.md</code>. If someone edits an example in a way that breaks the client, the build fails.</p></div>
+    </section>
+
+    <section id="game-core">
+      <h2>game-core: the slot session</h2>
+      <p><code>createSlotSession()</code> owns the session rules from the architecture doc. Its state lives in a <code>zustand/vanilla</code> store with no React, so the HUD and the renderer can both subscribe to it.</p>
+      <h3>Spin lifecycle: present after animate</h3>
+      <p>The response arrives in about 100 ms, but the reels take seconds to land. If the HUD showed the server result directly, the balance and win would change before the reels stopped. The session keeps the server result (<code>pending</code>) separate from what the screen shows (<code>displayed</code>, <code>balance</code>):</p>
+      <div class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+  participant P as Player / HUD
+  participant S as Slot session
+  participant R as Renderer
+  participant A as Game API
+  P->>S: spin("25")
+  S->>S: phase = requesting (controls lock)
+  S-->>R: reels start spinning
+  S->>A: POST /spin {bet, lines, fingerprint}
+  A-->>S: state + balance + nextStep
+  S->>S: phase = presenting, pending = round
+  S->>R: present(round)
+  R-->>S: reels landed, win lines shown
+  S->>S: commit displayed + balance, phase = idle
+  alt nextStep is freespin, respin or avalanche
+    S->>A: next step runs automatically
+  else spin, bonus, jackpot …
+    S-->>P: wait for the player
+  end
+</pre>
+      </div>
+      <h3>Rules it enforces</h3>
+      <ul>
+        <li><strong>Init exactly once.</strong> Every init rotates the fingerprint, so a second call locks out the player's own tab with error 112. <code>start()</code> ignores repeat calls. The fingerprint is kept inside the session, never in the store.</li>
+        <li><strong><code>nextStep</code> is the only driver.</strong> Freespin, respin and avalanche continue automatically, including after a reload into a freespin series. Spin, buy, bonus, open-field-item, jackpot and getPreviousState are player intents.</li>
+        <li><strong>Guarded intents.</strong> An intent returns <code>false</code> and sends nothing when the server isn't expecting that step, or when the bet, lines, bonus variant or cell would be rejected. The API answers those mistakes with CRITICAL errors that end the session, so they are caught locally first.</li>
+        <li><strong>Operator freespins handoff.</strong> When <code>externalFreespins.nextSessionKey</code> arrives, the session switches to a new transport and runs init on the new key.</li>
+      </ul>
+      <h3>Error policy</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Level</th><th>Examples</th><th>Session result</th><th>What the player sees</th></tr></thead>
+        <tbody>
+          <tr><td><span class="pill crit">CRITICAL</span></td><td>109 session closed, 111 geo, 106 wrong bet</td><td><code>phase: "over"</code></td><td>Session-over dialog with Reload</td></tr>
+          <tr><td><span class="pill alert">ALERT</span></td><td>3 not enough money, 112 opened elsewhere</td><td><code>error</code> set, phase stays idle</td><td>Dialog with OK; closing it retries interrupted automatic steps</td></tr>
+          <tr><td><span class="pill warnlvl">WARNING</span></td><td>300 language fallback</td><td>Passed to <code>onWarning</code></td><td>Nothing</td></tr>
+          <tr><td><span class="pill crit">CRITICAL</span></td><td>Network failure, unreadable response</td><td><code>phase: "over"</code></td><td>Session over; a reload recovers from init's <code>lastSpin</code></td></tr>
+        </tbody>
+      </table></div>
+      <p>Network failures are treated as CRITICAL on purpose. After a timeout the client cannot know whether the round was played, and re-sending a spin could play it twice. See <a href="#decisions">Open decisions</a>.</p>
+    </section>
+
+    <section id="renderer">
+      <h2>renderer: PixiJS reels</h2>
+      <p>The logic is split from the drawing so that most of it can be unit tested without WebGL.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Role</th><th>Tested by</th></tr></thead>
+        <tbody>
+          <tr><td><code>reel-motion.ts</code></td><td>Each reel is a strip of names (one buffer row above the window, then the visible rows) plus a scroll offset. While spinning, filler symbols enter from the top. To stop, the result enters bottom row first, and the reel rests exactly when the last one reaches row 1. <code>ReelSetMotion</code> adds a minimum spin time (500 ms) and staggers stops left to right (150 ms apart).</td><td>Unit tests</td></tr>
+          <tr><td><code>win-lines.ts</code></td><td>Maps a winning line to cells: 1-based API rows become 0-based, and <code>reverse</code> lines count from the rightmost reel.</td><td>Unit tests</td></tr>
+          <tr><td><code>connect.ts</code></td><td>Store binding. <code>requesting</code> starts the spin on click, hiding request latency. A failed request never reaches <code>presenting</code>, so the reels land back on the displayed state.</td><td>Unit tests</td></tr>
+          <tr><td><code>slot-scene.ts</code></td><td>Pixi v8 scene. It draws the strip every ticker frame, masks the reel window and draws win lines. Symbols are placeholder coloured tiles with names until atlases exist.</td><td>Browser</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="gameone">
+      <h2>gameone: wiring the game</h2>
+      <ul>
+        <li><strong><code>game.ts</code> boots once, outside React.</strong> React StrictMode runs effects twice in dev, which against the real API would mean a second init and an immediate 112 lockout.</li>
+        <li><strong>The scene is built as soon as init lands.</strong> Its <code>present()</code> waits for a scene-ready promise. A reload into free spins resumes before <code>start()</code> resolves, and building the scene after <code>start()</code> would have deadlocked.</li>
+        <li><strong><code>dev/mock-transport.ts</code></strong> serves base-game spins when <code>VITE_API_URL</code> and <code>?sessionKey=</code> are absent. Every third spin is a scripted three-symbol win on payline 6.</li>
+        <li><strong>Layout</strong> scales the reels to fit above the HUD on resize, down to phone width.</li>
+      </ul>
+    </section>
+
+    <section id="hud">
+      <h2>hud: the React overlay</h2>
+      <p><code>&lt;SlotHud session={session} buyFeature? onReload? /&gt;</code> renders:</p>
+      <ul>
+        <li>Balance and win; win shows "—" when zero, and the label reads "Free spins · Win" during a series.</li>
+        <li>A − / + bet stepper through the allowed bets, showing the total bet (bet × lines).</li>
+        <li>Spin, and an optional Buy bonus button priced at total bet × <code>bonusCoefficient</code>%. It is opt-in per game, because <code>/buy</code> on a game without the feature ends the session (102).</li>
+        <li>Error dialogs by level, and tournament start and winner popups shown one at a time.</li>
+        <li>Controls are enabled only when the session is idle, no dialog is open and the server expects a spin.</li>
+      </ul>
+      <h3>Money without floats</h3>
+      <p>Amounts are multiplied on BigInt-scaled strings and formatted by <code>Intl.NumberFormat</code> using string input, rounded to <code>currencyData.rounding</code>. A float would get these wrong:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Input</th><th>Float result</th><th>This code</th></tr></thead>
+        <tbody>
+          <tr><td><code>0.1 × 3</code></td><td class="num">0.30000000000000004</td><td class="num"><code>"0.3"</code></td></tr>
+          <tr><td><code>"1.005"</code> at 2 decimals</td><td class="num">$1.00 (1.00499…)</td><td class="num">$1.01</td></tr>
+          <tr><td><code>"12345678901234567.89"</code></td><td class="num">precision lost</td><td class="num">$12,345,678,901,234,567.89</td></tr>
+          <tr><td>Currency <code>USDT</code></td><td class="num">Intl throws</td><td class="num">1,234.50 USDT</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="verification">
+      <h2>Verification</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Project</th><th>Tests</th><th>Statement coverage</th></tr></thead>
+        <tbody>
+          <tr><td><code>protocol</code></td><td class="num">21</td><td class="num">98.8%</td></tr>
+          <tr><td><code>game-core</code></td><td class="num">22</td><td class="num">100%</td></tr>
+          <tr><td><code>renderer</code></td><td class="num">16</td><td class="num">100% of tested files (the Pixi scene is checked in the browser)</td></tr>
+          <tr><td><code>hud</code></td><td class="num">17</td><td class="num">98%</td></tr>
+          <tr><td><code>gameone</code></td><td class="num">1</td><td class="num">HUD wiring</td></tr>
+        </tbody>
+      </table></div>
+      <p>Before every commit, <code>bun nx run-many -t lint typecheck test build</code> passed with zero lint warnings and a clean <code>format:check</code>.</p>
+      <h3>Browser checks (Playwright, mock backend)</h3>
+      <ul>
+        <li>Load restores <code>lastSpin</code>. During a spin the reels scroll inside the mask, the controls lock, and the balance doesn't change until the reels land.</li>
+        <li>At bet 25 × 10 lines the balance went $10,000 → $9,750 → $9,500, and the third spin's $125 win gave $9,375. The win line was drawn on payline 6.</li>
+        <li>At 375 px wide the reels scale down and the HUD wraps to two rows without horizontal scrolling.</li>
+      </ul>
+      <h3>Bugs caught along the way</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Bug</th><th>Caught by</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td>The HUD re-rendered forever before init: <code>bets ?? []</code> made a new array every render, which defeated <code>useShallow</code>.</td><td>Browser</td><td>A shared empty-array constant, plus a test that renders before init.</td></tr>
+          <tr><td>The Pixi <code>SymbolCell.label</code> field clashed with <code>Container.label</code>.</td><td>Typecheck</td><td>Renamed it to <code>caption</code>.</td></tr>
+          <tr><td>The test fake transport skipped parsing, so bets stayed numbers and every spin was refused.</td><td>game-core tests</td><td>The fake parses init exactly like the real transport.</td></tr>
+          <tr><td>The doc-examples helper broke under jsdom (the module URL isn't a <code>file:</code> URL there).</td><td>hud tests</td><td>It resolves the doc path with <code>import.meta.dirname</code>.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="decisions">
+      <h2>Open decisions</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Question</th><th>Current behaviour</th><th>Who decides</th></tr></thead>
+        <tbody>
+          <tr><td>Should network failures allow a retry?</td><td>CRITICAL, and a reload recovers. A safe retry needs an idempotency key, which the API doesn't have.</td><td>You and the backend team</td></tr>
+          <tr><td>Which bet does the client send during operator free rounds, when it isn't in <code>bets</code>?</td><td>Not handled; the doc doesn't say.</td><td>Backend team</td></tr>
+          <tr><td>Does init send the full payload when it reports 109?</td><td>The schema assumes yes, because the doc says the error fields are merged in.</td><td>Check against a real expired session</td></tr>
+          <tr><td>Should free spins wait for a "press to start"?</td><td>They start automatically.</td><td>Game design</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <section id="next">
+      <h2>Not built yet</h2>
+      <ul>
+        <li><strong>Gameplay:</strong> autoplay, restoring the last bet on reload, <code>spinSpeed</code> and the optional request fields.</li>
+        <li><strong>Renderer:</strong> real atlases and Spine, a GSAP bounce on reel stop, the big-win sequence, sound, portrait layout tuning.</li>
+        <li><strong>HUD:</strong> tournaments list, nickname, settings, i18n (strings are inline English).</li>
+        <li><strong>Games:</strong> the seven variant-game adapters, then the lobby app.</li>
+        <li><strong>Infrastructure:</strong> CI on GitHub Actions with bun, protection on <code>main</code>, code-splitting Pixi out of the main bundle.</li>
+        <li><strong>Crash games:</strong> a <code>/crash</code> family in each package, once its socket API spec exists.</li>
+      </ul>
+    </section>
+
+    <section id="run">
+      <h2>How to run</h2>
+<pre class="code"><code>bun install
+bun run serve:gameone          # http://localhost:4300, mock backend
+VITE_API_URL=https://api.example.com bun run serve:gameone
+                               # real API: open with ?sessionKey=…
+bun nx run-many -t lint typecheck test build
+bun nx test game-core --coverage
+bun nx graph</code></pre>
+    </section>
+  </main>
+</div>
+
+<!--claude-mermaid-runtime-begin:3847-->
+<style>.mermaid-diagram{margin-block:4px}.mermaid-diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}</style>
+<script src="/_runtime/mermaid-11.16.1.min.js"></script>
+<script>(function(){
+var CFG={"palettes":{"light":{"surface":"#f4efe4","text":"#42392e","line":"#8a7f6d","border":"#7a6c52","bg":"#fffdf8"},"dark":{"surface":"#262b34","text":"#f2f3f5","line":"#a8adb8","border":"#9aa4b8","bg":"#1f232b"}}};
+if(typeof mermaid==='undefined')return;
+var pres=Array.prototype.slice.call(document.querySelectorAll('pre.mermaid')).filter(function(p){if(p.hasAttribute('data-claude-mermaid-claimed'))return false;p.setAttribute('data-claude-mermaid-claimed','1');return true;});
+if(!pres.length)return;
+var mq=window.matchMedia?window.matchMedia('(prefers-color-scheme: dark)'):null;
+var root=document.documentElement;
+function source(el){
+var out='';
+for(var n=el.firstChild;n;n=n.nextSibling){
+if(n.nodeType===3)out+=n.data;
+else if(n.nodeName==='BR')out+='<br>';
+else if(n.nodeType===1)out+=(out.slice(-1)==='<'&&n.textContent[0]==='>'?'<'+n.localName+'>':'')+source(n);
+}
+return out;
+}
+var items=pres.map(function(pre){
+var mount=document.createElement('div');mount.className='mermaid-diagram';
+return {pre:pre,mount:mount,src:source(pre),text:pre.textContent};
+});
+var seq=0;
+var renderGen=0;
+var lastKey='';
+function pageBg(fallback){
+var els=[document.body,document.documentElement];
+for(var i=0;i<els.length;i++){
+var c=els[i]&&getComputedStyle(els[i]).backgroundColor;
+if(c&&c!=='transparent'&&c!=='rgba(0, 0, 0, 0)')return c;
+}
+return fallback;
+}
+function render(){
+var theme=root.getAttribute('data-theme');
+var dark=theme==='dark'||(!!(mq&&mq.matches)&&theme!=='light');
+var pal=dark?CFG.palettes.dark:CFG.palettes.light;
+var bg=pageBg(pal.bg);
+var key=(dark?'d':'l')+'|'+bg;
+if(key===lastKey)return;
+lastKey=key;
+var gen=++renderGen;
+var font=getComputedStyle(document.body).fontFamily||'sans-serif';
+var nat={useMaxWidth:false};
+mermaid.initialize({
+startOnLoad:false,securityLevel:'strict',theme:'base',
+flowchart:nat,sequence:nat,er:nat,state:nat,class:nat,pie:nat,
+gantt:nat,journey:nat,timeline:nat,gitGraph:nat,mindmap:nat,xyChart:nat,
+quadrantChart:nat,sankey:nat,c4:nat,requirement:nat,block:nat,
+packet:nat,kanban:nat,architecture:nat,radar:nat,
+themeVariables:{background:bg,mainBkg:pal.surface,primaryColor:pal.surface,
+primaryTextColor:pal.text,lineColor:pal.line,primaryBorderColor:pal.border,
+nodeBorder:pal.border,clusterBorder:pal.border,edgeLabelBackground:bg,
+clusterBkg:'rgba(127,127,127,0.07)',titleColor:pal.text,
+darkMode:dark,rowOdd:bg,rowEven:'rgba(127,127,127,0.07)',
+attributeBackgroundColorOdd:bg,attributeBackgroundColorEven:'rgba(127,127,127,0.07)',
+fontSize:'16px',fontFamily:font},
+themeCSS:'.node rect, .node circle, .node polygon, .node path, .cluster rect { stroke-width: 2px; }'
+});
+items.forEach(function(it){
+var id='claude-mermaid-'+seq++;
+mermaid.render(id,it.src).catch(function(e){
+if(it.src===it.text)throw e;
+return mermaid.render(id,it.text);
+}).then(function(r){
+if(gen!==renderGen)return;
+var prev=it.pre.previousElementSibling;
+if(prev&&prev.className==='mermaid-diagram'&&prev!==it.mount)return;
+it.mount.innerHTML=r.svg;
+if(!it.mount.parentNode)it.pre.parentNode.insertBefore(it.mount,it.pre);
+it.pre.style.display='none';
+},function(){
+var scratch=document.getElementById(id);
+if(scratch)scratch.parentNode.removeChild(scratch);
+scratch=document.getElementById('d'+id);
+if(scratch)scratch.parentNode.removeChild(scratch);
+if(gen!==renderGen)return;
+if(it.mount.parentNode)it.mount.parentNode.removeChild(it.mount);
+it.pre.style.display='';
+});
+});
+}
+render();
+if(mq&&mq.addEventListener)mq.addEventListener('change',render);
+if(typeof MutationObserver!=='undefined')new MutationObserver(render).observe(root,{attributes:true,attributeFilter:['data-theme']});
+})();</script>
+<!--claude-mermaid-runtime-end-->
+
+</body></html>
