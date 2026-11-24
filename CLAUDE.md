@@ -146,6 +146,30 @@ Example: `ech/feat/spin-loop`, `ech/fix/fingerprint-retry`
 - Strict mode enabled
 - Libraries expose their API from `src/index.ts`; import by package name (`@fep/game-core`), never deep paths
 - Zod at the API edge, types via `z.infer`
+- `moduleResolution: "bundler"` (set once in `tsconfig.base.json`): relative imports have no extension — `./money`, not
+  `./money.js`
+
+### Package Layout
+
+One export per file — never mix types, schemas, constants and logic in one file. Group files by kind inside each game
+family folder (`common/`, `slot/`):
+
+```
+src/
+├── index.ts            # barrel: `export *` for code, `export type *` for type files
+├── store/              # all zustand code, root level: store creation, state types, selector hooks, subscriptions
+├── common/ | slot/
+│   ├── schemas/        # <name>.schema.ts — one Zod schema each
+│   ├── types/          # <name>.type.ts — one type/interface each (z.infer types live here, not next to the schema)
+│   ├── config/         # static lookup maps, e.g. error codes
+│   ├── constants/
+│   ├── utils/          # one function each
+│   ├── errors/         # error classes
+│   └── <feature>/      # e.g. session/, transport/, adapters/
+```
+
+- Specs sit next to the file they test: `create-slot-session.spec.ts`
+- Internal helpers (schemas, types) get their own file too, but stay out of the barrel
 
 ### Testing
 

@@ -1,4 +1,4 @@
-import { ReelMotion, ReelSetMotion } from "./reel-motion.js";
+import { ReelMotion, ReelSetMotion } from "./reel-motion";
 
 const SYMBOLS = ["a", "b", "c", "d"];
 const filler = () => 0; // always "a"

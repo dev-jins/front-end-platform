@@ -1,9 +1,9 @@
 import type { GameState, Slot } from "@fep/protocol/slot";
 import { Container, Graphics, Text, type Ticker } from "pixi.js";
 
-import type { SpinView } from "./connect.js";
-import { ReelSetMotion } from "./reel-motion.js";
-import { reelColumns, winLineCells } from "./win-lines.js";
+import type { SpinView } from "../store/types/spin-view.type";
+import { ReelSetMotion } from "./reel-motion";
+import { reelColumns, winLineCells } from "./win-lines";
 
 export interface SlotSceneOptions {
     /** `init.slot.params`: reel sizes, symbols, paylines. */

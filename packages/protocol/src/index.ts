@@ -1,4 +1,22 @@
 // Shared by every game family. Family specific code: `@fep/protocol/slot`.
-
-export * from "./common/errors.js";
-export * from "./common/schemas.js";
+export * from "./common/config/error-code";
+export * from "./common/errors/game-api-error";
+export * from "./common/schemas/balance.schema";
+export * from "./common/schemas/business-error.schema";
+export * from "./common/schemas/error-level.schema";
+export * from "./common/schemas/numeric-string.schema";
+export * from "./common/schemas/parse-error.schema";
+export * from "./common/schemas/tournament.schema";
+export * from "./common/schemas/tournament-start-popup.schema";
+export * from "./common/schemas/tournament-winner-popup.schema";
+export * from "./common/schemas/tournaments-response.schema";
+export * from "./common/schemas/validation-error.schema";
+export type * from "./common/types/balance.type";
+export type * from "./common/types/error-level.type";
+export type * from "./common/types/game-api-error-detail.type";
+export type * from "./common/types/tournament.type";
+export type * from "./common/types/tournament-start-popup.type";
+export type * from "./common/types/tournament-winner-popup.type";
+export type * from "./common/types/tournaments-response.type";
+export type * from "./common/types/violation.type";
+export * from "./common/utils/to-game-api-error";

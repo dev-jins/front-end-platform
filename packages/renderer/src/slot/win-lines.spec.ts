@@ -1,4 +1,4 @@
-import { reelColumns, winLineCells } from "./win-lines.js";
+import { reelColumns, winLineCells } from "./win-lines";
 
 // Paylines from the API doc's init example.
 const PAYLINES = [

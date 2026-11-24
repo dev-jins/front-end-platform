@@ -1,4 +1,4 @@
-import { formatMoney, isZeroMoney, multiplyMoney, percentOf } from "./money.js";
+import { formatMoney, isZeroMoney, multiplyMoney, percentOf } from "./money";
 
 describe("multiplyMoney", () => {
     it("multiplies exactly", () => {

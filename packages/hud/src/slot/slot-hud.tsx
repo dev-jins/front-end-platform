@@ -1,9 +1,8 @@
 import type { SlotSession } from "@fep/game-core/slot";
 import { type ReactNode, useState } from "react";
-import { useStore } from "zustand";
-import { useShallow } from "zustand/react/shallow";
 
-import { formatMoney, isZeroMoney, multiplyMoney, percentOf } from "./money.js";
+import { useSlotHudState } from "../store/use-slot-hud-state";
+import { formatMoney, isZeroMoney, multiplyMoney, percentOf } from "./money";
 import styles from "./slot-hud.module.css";
 
 export interface SlotHudProps<S> {
@@ -18,19 +17,8 @@ const reloadPage = () => window.location.reload();
 
 // ponytail: English strings inline; switch to i18n keys when packages/i18n lands.
 export function SlotHud<S>({ session, buyFeature = false, onReload = reloadPage }: SlotHudProps<S>) {
-    const { phase, init, balance, win, mode, nextStep, error, startPopup, winnerPopup } = useStore(
-        session.store,
-        useShallow((s) => ({
-            phase: s.phase,
-            init: s.init,
-            balance: s.balance,
-            win: s.displayed?.totalWin ?? null,
-            mode: s.displayed?.mode ?? null,
-            nextStep: s.displayed?.nextStep ?? null,
-            error: s.error,
-            startPopup: s.tournamentStartPopup,
-            winnerPopup: s.tournamentWinnerPopup,
-        }))
+    const { phase, init, balance, win, mode, nextStep, error, startPopup, winnerPopup } = useSlotHudState(
+        session.store
     );
     const [betIndex, setBetIndex] = useState(0);
 

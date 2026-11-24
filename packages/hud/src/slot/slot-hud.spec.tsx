@@ -4,7 +4,7 @@ import { initResponseSchema, type SlotTransport } from "@fep/protocol/slot";
 import { docExamples } from "@fep/protocol/testing";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 
-import { SlotHud } from "./slot-hud.js";
+import { SlotHud } from "./slot-hud";
 
 type Raw = Record<string, unknown>;
 const [initExample] = docExamples("Game init request") as [Raw];
