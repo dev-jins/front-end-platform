@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multi-Provider Game Gateway</title>
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#1b1d21; --ink-2:#555b66; --line:#d9dbe0;
+  --accent:#2f5bd3; --accent-soft:#e6edfc; --ok:#1f8a4c; --ok-soft:#e3f4ea;
+  --warn:#a86300; --warn-soft:#fbf0dc; --bad:#c2352b; --bad-soft:#fbe5e3;
+  --violet:#7a4cc2; --violet-soft:#efe8fa;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121417; --surface:#1b1e23; --ink:#e8eaed; --ink-2:#a2a8b3; --line:#30353d;
+    --accent:#7aa2ff; --accent-soft:#1f2a44; --ok:#5cc98a; --ok-soft:#173022;
+    --warn:#e6a64a; --warn-soft:#352812; --bad:#ff7b70; --bad-soft:#3a1a18;
+    --violet:#b893f5; --violet-soft:#2a2140;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121417; --surface:#1b1e23; --ink:#e8eaed; --ink-2:#a2a8b3; --line:#30353d;
+  --accent:#7aa2ff; --accent-soft:#1f2a44; --ok:#5cc98a; --ok-soft:#173022;
+  --warn:#e6a64a; --warn-soft:#352812; --bad:#ff7b70; --bad-soft:#3a1a18;
+  --violet:#b893f5; --violet-soft:#2a2140;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:28px;margin:0 0 4px}
+h2{font-size:20px;margin:48px 0 6px;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:15px;margin:22px 0 6px}
+p.lead{color:var(--ink-2);margin:0 0 20px;max-width:800px}
+p{max-width:820px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em;background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 8px}
+nav a{font-size:13px;text-decoration:none;border:1px solid var(--line);background:var(--surface);padding:4px 10px;border-radius:999px}
+nav a:hover{border-color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
+.diagram{overflow-x:auto}
+.diagram svg{display:block;width:100%;min-width:660px;height:auto}
+svg text{fill:var(--ink);font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+svg .sub{fill:var(--ink-2);font-size:11.5px}
+svg .mono{font-family:var(--mono);font-size:11.5px}
+svg .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+svg .box.core{fill:var(--accent-soft);stroke:var(--accent)}
+svg .box.client{fill:var(--ok-soft);stroke:var(--ok)}
+svg .box.prov{fill:var(--violet-soft);stroke:var(--violet)}
+svg .box.ext{stroke-dasharray:5 4}
+svg .frame{fill:none;stroke:var(--accent);stroke-width:1.3;stroke-dasharray:6 5}
+svg .edge{stroke:var(--ink-2);stroke-width:1.5;fill:none}
+svg .edge.dash{stroke-dasharray:5 4}
+svg .edge.acc{stroke:var(--accent)}
+svg .life{stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 4}
+svg .head{fill:var(--ink-2)} svg .head-acc{fill:var(--accent)}
+svg .lbl{fill:var(--accent);font-size:11px;font-weight:700;letter-spacing:.06em}
+svg .band{fill:var(--warn-soft);stroke:var(--warn);stroke-dasharray:4 4}
+svg .note{fill:var(--bg);stroke:var(--line)}
+svg .acctxt{fill:var(--accent)}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.grid .card{margin:0}
+.card h4{margin:0 0 6px;font-size:14px}
+.card p,.card ul{margin:0;font-size:14px;color:var(--ink-2)}
+.card ul{padding-left:18px}
+.card li{margin:4px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2)}
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.y{color:var(--ok);font-weight:600} .n{color:var(--bad);font-weight:600} .m{color:var(--warn);font-weight:600}
+.shape{font-family:var(--mono);font-size:12.5px;line-height:1.65;white-space:pre;overflow-x:auto;margin:0}
+.shape .c{color:var(--ink-2)} .shape .k{color:var(--accent);font-weight:600}
+.verdict{border-left:4px solid var(--accent)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.phase{position:relative}
+.phase .num{font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.05em}
+.hyp{font-size:12px;color:var(--warn)}
+footer{margin-top:48px;color:var(--ink-2);font-size:13px}
+</style>
+</head>
+<body>
+<main>
+<h1>Multi-Provider Game Gateway</h1>
+<p class="lead">How to make one lobby and one set of generic game clients work with the current Game API <i>and</i> other game providers. Compares a frontend adapter layer, a server-side proxy, and a hybrid, then details the recommended design: a canonical game protocol behind a Game Gateway.</p>
+
+<nav>
+  <a href="#problem">Problem</a>
+  <a href="#options">Options</a>
+  <a href="#compare">Comparison</a>
+  <a href="#hybrid">Hybrid explained</a>
+  <a href="#arch">Recommended architecture</a>
+  <a href="#protocol">Canonical protocol</a>
+  <a href="#mapping">Provider mapping</a>
+  <a href="#play">Play flow</a>
+  <a href="#client">Generic client</a>
+  <a href="#lobby">Lobby aggregation</a>
+  <a href="#fruitstorm">Fruit Storm A / B example</a>
+  <a href="#stack">Stack</a>
+  <a href="#roadmap">Roadmap</a>
+  <a href="#risks">Risks</a>
+</nav>
+
+<!-- PROBLEM -->
+<h2 id="problem">1. The problem</h2>
+<p>Today the game client speaks the Game API directly: <code>sessionKey</code> in the path, <code>fingerprint</code> in the body, <code>nextStep</code> drives the flow, errors are numeric codes. Another provider will differ in every one of these.</p>
+<div class="grid">
+  <div class="card"><h4>Session &amp; auth</h4><p>Path key + fingerprint here; elsewhere bearer tokens, HMAC-signed requests, operator tokens that must never reach the browser.</p></div>
+  <div class="card"><h4>Flow model</h4><p><code>nextStep</code> here; elsewhere state enums, "feature pending" flags, or a server push over WebSocket.</p></div>
+  <div class="card"><h4>Outcome shape</h4><p>Reels + winLines here (plus 7 game-specific variants); elsewhere symbol IDs, cluster pays, cents as integers.</p></div>
+  <div class="card"><h4>Errors</h4><p>Codes 3/109/112… here; elsewhere string codes, HTTP-only errors, different severity rules.</p></div>
+</div>
+<p>Goal: game clients and lobby code are written <b>once</b> against our own structure, and each provider is a pluggable connector.</p>
+
+<!-- OPTIONS -->
+<h2 id="options">2. Three options</h2>
+<div class="card diagram">
+<svg viewBox="0 0 900 260" role="img" aria-label="Three integration options">
+  <defs>
+    <marker id="o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0L10,5L0,10z"/></marker>
+  </defs>
+  <!-- Option 1 -->
+  <text x="150" y="22" text-anchor="middle" font-weight="600">① Frontend adapter layer</text>
+  <rect class="box client" x="40" y="36" width="220" height="74" rx="8"/>
+  <text x="150" y="60" text-anchor="middle" font-weight="600">Game client</text>
+  <text x="150" y="80" text-anchor="middle" class="sub">UI + adapters A · B · C</text>
+  <text x="150" y="96" text-anchor="middle" class="sub">(in the browser)</text>
+  <path class="edge" d="M150,110 L60,198" marker-end="url(#o)"/>
+  <path class="edge" d="M150,110 L150,198" marker-end="url(#o)"/>
+  <path class="edge" d="M150,110 L240,198" marker-end="url(#o)"/>
+  <rect class="box prov" x="20" y="200" width="80" height="40" rx="6"/><text x="60" y="225" text-anchor="middle">Prov A</text>
+  <rect class="box prov" x="110" y="200" width="80" height="40" rx="6"/><text x="150" y="225" text-anchor="middle">Prov B</text>
+  <rect class="box prov" x="200" y="200" width="80" height="40" rx="6"/><text x="240" y="225" text-anchor="middle">Prov C</text>
+
+  <!-- Option 2 -->
+  <text x="450" y="22" text-anchor="middle" font-weight="600">② Server gateway (proxy)</text>
+  <rect class="box client" x="340" y="36" width="220" height="54" rx="8"/>
+  <text x="450" y="60" text-anchor="middle" font-weight="600">Game client</text>
+  <text x="450" y="78" text-anchor="middle" class="sub">canonical protocol only</text>
+  <path class="edge" d="M450,90 L450,118" marker-end="url(#o)"/>
+  <rect class="box core" x="340" y="120" width="220" height="46" rx="8"/>
+  <text x="450" y="140" text-anchor="middle" font-weight="600">Game Gateway</text>
+  <text x="450" y="157" text-anchor="middle" class="sub">connectors A · B · C</text>
+  <path class="edge" d="M450,166 L360,198" marker-end="url(#o)"/>
+  <path class="edge" d="M450,166 L450,198" marker-end="url(#o)"/>
+  <path class="edge" d="M450,166 L540,198" marker-end="url(#o)"/>
+  <rect class="box prov" x="320" y="200" width="80" height="40" rx="6"/><text x="360" y="225" text-anchor="middle">Prov A</text>
+  <rect class="box prov" x="410" y="200" width="80" height="40" rx="6"/><text x="450" y="225" text-anchor="middle">Prov B</text>
+  <rect class="box prov" x="500" y="200" width="80" height="40" rx="6"/><text x="540" y="225" text-anchor="middle">Prov C</text>
+
+  <!-- Option 3 -->
+  <text x="750" y="22" text-anchor="middle" font-weight="600">③ Hybrid (transport port)</text>
+  <rect class="box client" x="640" y="36" width="220" height="54" rx="8"/>
+  <text x="750" y="60" text-anchor="middle" font-weight="600">Game client</text>
+  <text x="750" y="78" text-anchor="middle" class="sub">GameTransport interface</text>
+  <path class="edge" d="M775,90 L775,118" marker-end="url(#o)"/>
+  <rect class="box core" x="690" y="120" width="170" height="46" rx="8"/>
+  <text x="775" y="140" text-anchor="middle" font-weight="600">Game Gateway</text>
+  <text x="775" y="157" text-anchor="middle" class="sub">connectors B · C</text>
+  <path class="edge dash" d="M660,90 L660,198" marker-end="url(#o)"/>
+  <text x="666" y="150" class="sub">direct</text>
+  <path class="edge" d="M775,166 L750,198" marker-end="url(#o)"/>
+  <path class="edge" d="M775,166 L840,198" marker-end="url(#o)"/>
+  <rect class="box prov" x="620" y="200" width="80" height="40" rx="6"/><text x="660" y="225" text-anchor="middle">Prov A</text>
+  <rect class="box prov" x="710" y="200" width="80" height="40" rx="6"/><text x="750" y="225" text-anchor="middle">Prov B</text>
+  <rect class="box prov" x="800" y="200" width="80" height="40" rx="6"/><text x="840" y="225" text-anchor="middle">Prov C</text>
+</svg>
+</div>
+<div class="grid">
+  <div class="card"><h4>① Frontend adapter layer</h4><p>Each provider's API is called from the browser and converted to our structure by a client-side adapter. No servers to run, but secrets, CORS and every provider change live in the game bundle.</p></div>
+  <div class="card"><h4>② Server gateway</h4><p>A backend-for-frontend that speaks one canonical protocol to all clients and translates to each provider server-to-server. Clients never know which provider they are on.</p></div>
+  <div class="card"><h4>③ Hybrid</h4><p>Client codes against a <code>GameTransport</code> interface. Production uses the gateway transport; a direct transport is allowed for browser-safe providers, and a mock transport for development.</p></div>
+</div>
+
+<!-- COMPARE -->
+<h2 id="compare">3. Comparison</h2>
+<div class="tbl"><table>
+<tr><th>Criterion</th><th>① Frontend adapters</th><th>② Server gateway</th><th>③ Hybrid</th></tr>
+<tr><td>Provider secrets / request signing</td><td class="n">Exposed in browser</td><td class="y">Stay on server</td><td class="y">Server (direct only for public APIs)</td></tr>
+<tr><td>CORS / provider allow-lists</td><td class="n">Needs every provider to allow your domains</td><td class="y">Server-to-server, no CORS</td><td class="y">Mostly none</td></tr>
+<tr><td>Latency</td><td class="y">No extra hop</td><td class="m">+1 hop (~10–30 ms in-region)</td><td class="m">Same as ②, direct optional</td></tr>
+<tr><td>Add or fix a provider</td><td class="n">New client release of every game</td><td class="y">Deploy gateway only</td><td class="y">Deploy gateway only</td></tr>
+<tr><td>Bundle size</td><td class="m">Grows per provider (lazy-load helps)</td><td class="y">One protocol</td><td class="y">One protocol + port</td></tr>
+<tr><td>Idempotency, audit log, replay</td><td class="n">Can't enforce in browser</td><td class="y">Central</td><td class="y">Central</td></tr>
+<tr><td>Jurisdiction rules (spin speed, autoplay…)</td><td class="m">Per client config</td><td class="y">Decided server-side, sent as capabilities</td><td class="y">Same as ②</td></tr>
+<tr><td>Infra / ops cost</td><td class="y">None</td><td class="m">Service + Redis + monitoring</td><td class="m">Same as ②</td></tr>
+<tr><td>Offline dev &amp; replay of real rounds</td><td class="m">Mocks per adapter</td><td class="m">Needs gateway running</td><td class="y">Mock transport replays fixtures</td></tr>
+</table></div>
+<div class="card verdict"><h4>Recommendation: ③ Hybrid, with the gateway as the default path</h4><p>Put translation on the server (security, single place to change, idempotency, audit), but make the client depend only on a <code>GameTransport</code> interface. You get a mock transport for free, and you can start with a client-side adapter for the current Game API <b>before</b> the gateway exists — then swap the transport without touching game code.</p></div>
+
+<!-- HYBRID EXPLAINED -->
+<h2 id="hybrid">3b. Hybrid mode explained</h2>
+<div class="card verdict"><h4>The core idea in one sentence</h4><p>Hybrid is <b>not a third server</b> and not "call two backends at once". It is a code-structure rule: <b>game code depends only on a <code>GameTransport</code> interface</b>, and <b>provider translation lives in a pure-function package</b> that can run either in the browser or inside the gateway. Picking a mode means picking which transport is created when the game starts.</p></div>
+
+<h3>Three layers</h3>
+<div class="grid">
+  <div class="card"><h4>1 · Port — <code>GameTransport</code></h4><p>A TypeScript interface with <code>init()</code>, <code>play()</code>, <code>tournaments()</code>. Takes and returns <b>canonical</b> types only. HUD, renderer and game-core import nothing else.</p></div>
+  <div class="card"><h4>2 · Transports — how bytes travel</h4><p><b>Gateway</b>: canonical HTTPS to our server. <b>Direct</b>: provider's native API from the browser. <b>Mock</b>: recorded JSON, no network. Each one implements the port.</p></div>
+  <div class="card"><h4>3 · Mappers — how data is translated</h4><p>One package per provider: pure functions <code>toNative(cmd)</code> and <code>toCanonical(raw)</code>. No fetch, no secrets, no DOM. Because they are pure, the <b>same file</b> runs in the browser (Direct) and on the server (gateway connector).</p></div>
+</div>
+
+<div class="card diagram">
+<svg viewBox="0 0 900 490" role="img" aria-label="Hybrid transport diagram">
+  <defs>
+    <marker id="h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0L10,5L0,10z"/></marker>
+    <marker id="ha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head-acc" d="M0,0L10,5L0,10z"/></marker>
+  </defs>
+  <rect class="box client" x="200" y="20" width="500" height="56" rx="8"/>
+  <text x="450" y="44" text-anchor="middle" font-weight="600">Game code — HUD · renderer · game-core</text>
+  <text x="450" y="63" text-anchor="middle" class="sub">knows only canonical types · identical in every mode</text>
+  <path class="edge" d="M450,76 L450,104" marker-end="url(#h)"/>
+
+  <rect class="box core" x="200" y="106" width="500" height="46" rx="8"/>
+  <text x="450" y="127" text-anchor="middle" font-weight="600">GameTransport (port)</text>
+  <text x="450" y="143" text-anchor="middle" class="sub mono">init() · play(cmd) · tournaments()</text>
+
+  <path class="edge" d="M300,152 L160,188" marker-end="url(#h)"/>
+  <path class="edge" d="M450,152 L450,188" marker-end="url(#h)"/>
+  <path class="edge" d="M600,152 L740,188" marker-end="url(#h)"/>
+  <text x="450" y="176" text-anchor="middle" class="sub">one is created at startup</text>
+
+  <rect class="box" x="40" y="190" width="240" height="70" rx="8"/>
+  <text x="160" y="214" text-anchor="middle" font-weight="600">MockTransport</text>
+  <text x="160" y="232" text-anchor="middle" class="sub">dev · tests · demos</text>
+  <text x="160" y="248" text-anchor="middle" class="sub">never in production</text>
+
+  <rect class="box" x="330" y="190" width="240" height="70" rx="8"/>
+  <text x="450" y="214" text-anchor="middle" font-weight="600">DirectTransport</text>
+  <text x="450" y="232" text-anchor="middle" class="sub">mapper runs in the browser</text>
+  <text x="450" y="248" text-anchor="middle" class="sub">calls provider natively</text>
+
+  <rect class="box core" x="620" y="190" width="240" height="70" rx="8"/>
+  <text x="740" y="214" text-anchor="middle" font-weight="600">GatewayTransport</text>
+  <text x="740" y="232" text-anchor="middle" class="sub">sends canonical JSON</text>
+  <text x="740" y="248" text-anchor="middle" class="sub">default in production</text>
+
+  <!-- row 3 -->
+  <path class="edge" d="M160,260 L160,328" marker-end="url(#h)"/>
+  <rect class="box ext" x="40" y="330" width="240" height="50" rx="8"/>
+  <text x="160" y="352" text-anchor="middle" font-weight="600">Recorded rounds</text>
+  <text x="160" y="369" text-anchor="middle" class="sub">canonical JSON fixtures</text>
+
+  <path class="edge dash" d="M475,260 L475,328" marker-end="url(#h)"/>
+  <text x="481" y="300" class="sub">imports</text>
+  <rect class="box" x="380" y="330" width="190" height="50" rx="8" style="stroke:var(--warn);fill:var(--warn-soft)"/>
+  <text x="475" y="352" text-anchor="middle" font-weight="600">mapper-A</text>
+  <text x="475" y="369" text-anchor="middle" class="sub">shared pure functions</text>
+
+  <path class="edge acc" d="M740,260 L740,328" marker-end="url(#ha)"/>
+  <text x="746" y="300" class="sub acctxt">canonical HTTPS</text>
+  <rect class="box core" x="620" y="330" width="240" height="50" rx="8"/>
+  <text x="740" y="352" text-anchor="middle" font-weight="600">Gateway · connector A</text>
+  <text x="740" y="369" text-anchor="middle" class="sub">runs on server</text>
+  <path class="edge dash" d="M620,355 L572,355" marker-end="url(#h)"/>
+  <text x="596" y="346" text-anchor="middle" class="sub">imports</text>
+
+  <!-- provider -->
+  <path class="edge" d="M350,260 L350,418" marker-end="url(#h)"/>
+  <text x="356" y="405" class="sub">native API from browser</text>
+  <path class="edge" d="M740,380 L740,418" marker-end="url(#h)"/>
+  <text x="746" y="405" class="sub">native API server-to-server</text>
+  <rect class="box prov" x="330" y="420" width="530" height="50" rx="8"/>
+  <text x="595" y="442" text-anchor="middle" font-weight="600">Provider A — current Game API</text>
+  <text x="595" y="459" text-anchor="middle" class="sub">same provider, reached two different ways</text>
+</svg>
+</div>
+
+<h3>The code</h3>
+<div class="grid">
+<div class="card"><h4>packages/protocol — the port</h4>
+<pre class="shape"><span class="k">export interface</span> GameTransport {
+  init(launch: LaunchParams): Promise&lt;CanonicalInit&gt;
+  play(cmd: PlayCommand): Promise&lt;PlayResult&gt;
+  tournaments(): Promise&lt;Tournament[]&gt;
+}</pre></div>
+<div class="card"><h4>packages/mappers/provider-a — shared, pure</h4>
+<pre class="shape"><span class="c">// no fetch, no secrets: runs in browser AND server</span>
+<span class="k">export function</span> toNative(cmd: PlayCommand) {
+  <span class="k">const</span> path = cmd.action === <span class="c">'cascade'</span> ? <span class="c">'avalanche'</span> : cmd.action
+  <span class="k">return</span> { path, body: { bet: cmd.bet, lines: cmd.params?.lines } }
+}
+<span class="k">export function</span> toCanonical(raw: unknown): PlayResult {
+  <span class="k">const</span> s = GameApiState.parse(raw)        <span class="c">// Zod</span>
+  <span class="k">return</span> { next: { action: mapStep(s.nextStep) },
+           balance: s.balance.amount, events: toEvents(s), … }
+}</pre></div>
+</div>
+<div class="grid" style="margin-top:12px">
+<div class="card"><h4>DirectTransport (browser)</h4>
+<pre class="shape"><span class="k">class</span> DirectTransport <span class="k">implements</span> GameTransport {
+  #fingerprint = <span class="c">''</span>   <span class="c">// lives in the tab</span>
+  <span class="k">async</span> play(cmd) {
+    <span class="k">const</span> { path, body } = toNative(cmd)
+    <span class="k">const</span> raw = <span class="k">await</span> post(
+      `${api}/game/${key}/${path}`,
+      { ...body, fingerprint: <span class="k">this</span>.#fingerprint })
+    <span class="k">return</span> toCanonical(raw)
+  }
+}</pre></div>
+<div class="card"><h4>GatewayTransport (browser)</h4>
+<pre class="shape"><span class="k">class</span> GatewayTransport <span class="k">implements</span> GameTransport {
+  <span class="k">async</span> play(cmd) {
+    <span class="k">return</span> post(`${gw}/v1/play`, {
+      ...cmd, requestId: crypto.randomUUID()
+    }, { token })          <span class="c">// already canonical</span>
+  }
+}
+<span class="c">// gateway connector A on the server calls the</span>
+<span class="c">// SAME toNative / toCanonical from mapper-A</span></pre></div>
+<div class="card"><h4>Choosing at startup</h4>
+<pre class="shape"><span class="c">// launch config comes from the lobby / gateway</span>
+<span class="c">// { transport: 'gateway', provider: 'prov-a', … }</span>
+<span class="k">const</span> transport =
+  cfg.transport === <span class="c">'direct'</span>  ? <span class="k">new</span> DirectTransport(cfg)
+: cfg.transport === <span class="c">'mock'</span>    ? <span class="k">new</span> MockTransport(cfg)
+:                              <span class="k">new</span> GatewayTransport(cfg)
+
+startGame(transport)   <span class="c">// game never asks which one</span></pre></div>
+</div>
+
+<h3>How one spin travels in each mode</h3>
+<div class="grid">
+  <div class="card"><h4>Gateway mode</h4><ul>
+    <li>Game calls <code>transport.play({action:'spin'})</code></li>
+    <li>Browser → gateway: canonical JSON + <code>requestId</code></li>
+    <li>Gateway: <code>toNative()</code> → adds the stored fingerprint → calls provider</li>
+    <li>Gateway: <code>toCanonical()</code> → stores result → returns</li>
+  </ul></div>
+  <div class="card"><h4>Direct mode</h4><ul>
+    <li>Game calls <code>transport.play({action:'spin'})</code></li>
+    <li>Browser: <code>toNative()</code> → adds fingerprint from the tab</li>
+    <li>Browser → provider native API</li>
+    <li>Browser: <code>toCanonical()</code> → returns to game</li>
+  </ul></div>
+  <div class="card"><h4>Mock mode</h4><ul>
+    <li>Game calls <code>transport.play({action:'spin'})</code></li>
+    <li>Returns the next recorded canonical round (with a small delay)</li>
+    <li>No network, no money — for UI work and tests</li>
+  </ul></div>
+</div>
+
+<h3>Side by side</h3>
+<div class="tbl"><table>
+<tr><th></th><th>Gateway</th><th>Direct</th><th>Mock</th></tr>
+<tr><td>Where mapping runs</td><td>Server</td><td>Browser</td><td>None (already canonical)</td></tr>
+<tr><td>Network path</td><td>Browser → gateway → provider</td><td>Browser → provider</td><td>None</td></tr>
+<tr><td>Provider secrets / fingerprint</td><td class="y">Stay on server</td><td class="m">In the tab (OK only if the provider designed it so)</td><td>—</td></tr>
+<tr><td>Safe retry of a play</td><td class="y"><code>requestId</code> dedup</td><td class="n">None — never auto-retry; re-init and read last round</td><td>—</td></tr>
+<tr><td>Audit log, rules, circuit breaker</td><td class="y">Yes</td><td class="n">No</td><td>—</td></tr>
+<tr><td>Extra servers needed</td><td>Gateway + Redis</td><td class="y">None</td><td class="y">None</td></tr>
+<tr><td>Use for</td><td>Production default</td><td>Phase 0, browser-safe providers, fallback</td><td>Local dev, CI, sales demos</td></tr>
+</table></div>
+
+<h3>When is Direct mode allowed for a provider?</h3>
+<div class="card"><ul>
+  <li>The provider's API is meant to be called from a browser (like the current Game API: session key in URL, fingerprint returned to the client)</li>
+  <li>No API keys, HMAC signing or operator credentials needed per request</li>
+  <li>The provider allows your game domain via CORS</li>
+  <li>The provider can return the last round after a lost response, so the client can recover without retrying the bet</li>
+  <li>The market does not require you to keep your own round audit log</li>
+</ul><p style="margin-top:8px">If any item fails, that provider is <b>gateway-only</b>.</p></div>
+
+<h3>How a provider moves between modes over time</h3>
+<div class="tbl"><table>
+<tr><th>Provider</th><th>Phase 0</th><th>Phase 1</th><th>Phase 2+</th></tr>
+<tr><td>A — current Game API</td><td>Direct (mapper-A in browser)</td><td>Gateway (same mapper-A on server) — config flip</td><td>Gateway; Direct kept as emergency fallback</td></tr>
+<tr><td>B — signed RGS</td><td>—</td><td>—</td><td>Gateway only (needs secrets)</td></tr>
+<tr><td>Any provider in dev</td><td colspan="3">Mock, with rounds recorded from the gateway audit log</td></tr>
+</table></div>
+
+<div class="grid" style="margin-top:12px">
+  <div class="card"><h4>What does NOT change when switching modes</h4><p>HUD, renderer, game-core, feature modules, game tests. Moving Provider A from Direct to Gateway is a config change plus deploying the connector — the mapper code is already written and tested.</p></div>
+  <div class="card"><h4>What it costs</h4><p>Two transports to maintain instead of one. They are thin (~50 lines each) because all translation is in the shared mapper, which is tested once with fixtures.</p></div>
+  <div class="card"><h4>Rule of thumb</h4><p>Mode is chosen <b>once per session</b> from launch config. Never switch transport mid-round, and never call two transports for the same action.</p></div>
+</div>
+
+<!-- ARCH -->
+<h2 id="arch">4. Recommended architecture</h2>
+<p>The Game Gateway is an <b>anti-corruption layer</b>: provider concepts stop at the connectors; everything above speaks the canonical protocol. The current Game API is just "Provider A".</p>
+<div class="card diagram">
+<svg viewBox="0 0 900 560" role="img" aria-label="Gateway architecture">
+  <defs>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0L10,5L0,10z"/></marker>
+    <marker id="ga" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head-acc" d="M0,0L10,5L0,10z"/></marker>
+  </defs>
+  <!-- top row -->
+  <rect class="box client" x="40" y="20" width="220" height="70" rx="8"/>
+  <text x="150" y="48" text-anchor="middle" font-weight="600">Lobby</text>
+  <text x="150" y="68" text-anchor="middle" class="sub">unified catalog · launch</text>
+  <rect class="box client" x="300" y="20" width="300" height="70" rx="8"/>
+  <text x="450" y="48" text-anchor="middle" font-weight="600">Generic game clients</text>
+  <text x="450" y="68" text-anchor="middle" class="sub">GameTransport · canonical schema · event player</text>
+  <rect class="box ext" x="640" y="20" width="220" height="70" rx="8"/>
+  <text x="750" y="48" text-anchor="middle" font-weight="600">Operator site</text>
+  <text x="750" y="68" text-anchor="middle" class="sub">launches lobby / game</text>
+  <path class="edge" d="M640,55 L602,55" marker-end="url(#g)"/>
+
+  <path class="edge acc" d="M150,90 L170,148" marker-end="url(#ga)"/>
+  <path class="edge acc" d="M400,90 L240,148" marker-end="url(#ga)"/>
+  <text x="330" y="125" class="sub acctxt">canonical HTTPS (+ optional WS push)</text>
+
+  <!-- gateway frame -->
+  <rect class="frame" x="30" y="130" width="840" height="230" rx="12"/>
+  <text x="46" y="146" class="lbl">GAME GATEWAY · stateless, horizontally scaled</text>
+
+  <rect class="box core" x="60" y="150" width="240" height="70" rx="8"/>
+  <text x="180" y="174" text-anchor="middle" font-weight="600">Canonical API</text>
+  <text x="180" y="192" text-anchor="middle" class="sub mono">/sessions · /play · /catalog</text>
+  <text x="180" y="208" text-anchor="middle" class="sub mono">/launch · /tournaments</text>
+
+  <rect class="box core" x="330" y="150" width="240" height="70" rx="8"/>
+  <text x="450" y="174" text-anchor="middle" font-weight="600">Core</text>
+  <text x="450" y="192" text-anchor="middle" class="sub">session map · idempotency</text>
+  <text x="450" y="208" text-anchor="middle" class="sub">capabilities · rules · errors</text>
+
+  <rect class="box core" x="600" y="150" width="240" height="70" rx="8"/>
+  <text x="720" y="174" text-anchor="middle" font-weight="600">Ops</text>
+  <text x="720" y="192" text-anchor="middle" class="sub">OpenTelemetry · audit log</text>
+  <text x="720" y="208" text-anchor="middle" class="sub">circuit breaker per provider</text>
+
+  <path class="edge" d="M300,185 L328,185" marker-end="url(#g)"/>
+  <path class="edge dash" d="M570,185 L598,185" marker-end="url(#g)"/>
+
+  <path class="edge" d="M450,220 L180,268" marker-end="url(#g)"/>
+  <path class="edge" d="M450,220 L450,268" marker-end="url(#g)"/>
+  <path class="edge" d="M450,220 L720,268" marker-end="url(#g)"/>
+
+  <rect class="box" x="60" y="270" width="240" height="70" rx="8"/>
+  <text x="180" y="296" text-anchor="middle" font-weight="600">Connector A</text>
+  <text x="180" y="314" text-anchor="middle" class="sub">current Game API · REST</text>
+  <text x="180" y="330" text-anchor="middle" class="sub">holds fingerprint server-side</text>
+  <rect class="box" x="330" y="270" width="240" height="70" rx="8"/>
+  <text x="450" y="296" text-anchor="middle" font-weight="600">Connector B</text>
+  <text x="450" y="314" text-anchor="middle" class="sub">REST + HMAC signing</text>
+  <text x="450" y="330" text-anchor="middle" class="sub hyp">example provider</text>
+  <rect class="box" x="600" y="270" width="240" height="70" rx="8"/>
+  <text x="720" y="296" text-anchor="middle" font-weight="600">Connector C</text>
+  <text x="720" y="314" text-anchor="middle" class="sub">WebSocket session</text>
+  <text x="720" y="330" text-anchor="middle" class="sub hyp">example provider</text>
+
+  <!-- providers -->
+  <path class="edge" d="M180,340 L180,398" marker-end="url(#g)"/>
+  <path class="edge" d="M450,340 L450,398" marker-end="url(#g)"/>
+  <path class="edge" d="M720,340 L720,398" marker-end="url(#g)"/>
+  <rect class="box prov" x="60" y="400" width="240" height="56" rx="8"/>
+  <text x="180" y="424" text-anchor="middle" font-weight="600">Provider A</text>
+  <text x="180" y="442" text-anchor="middle" class="sub">Game API /api/v1</text>
+  <rect class="box prov" x="330" y="400" width="240" height="56" rx="8"/>
+  <text x="450" y="424" text-anchor="middle" font-weight="600">Provider B</text>
+  <text x="450" y="442" text-anchor="middle" class="sub">RGS</text>
+  <rect class="box prov" x="600" y="400" width="240" height="56" rx="8"/>
+  <text x="720" y="424" text-anchor="middle" font-weight="600">Provider C</text>
+  <text x="720" y="442" text-anchor="middle" class="sub">RGS</text>
+
+  <!-- wallet -->
+  <path class="edge dash" d="M180,456 L180,488" marker-end="url(#g)"/>
+  <path class="edge dash" d="M450,456 L450,488" marker-end="url(#g)"/>
+  <path class="edge dash" d="M720,456 L720,488" marker-end="url(#g)"/>
+  <rect class="box ext" x="60" y="490" width="780" height="54" rx="8"/>
+  <text x="450" y="513" text-anchor="middle" font-weight="600">Operator wallet</text>
+  <text x="450" y="531" text-anchor="middle" class="sub">providers debit / credit as today — the gateway never holds money or decides outcomes</text>
+</svg>
+</div>
+<div class="grid">
+  <div class="card"><h4>What the gateway does</h4><ul><li>Translates requests and responses</li><li>Maps sessions and keeps provider secrets</li><li>Deduplicates retries (<code>requestId</code>)</li><li>Normalizes errors and capabilities</li><li>Logs every round for audit and replay</li></ul></div>
+  <div class="card"><h4>What it must not do</h4><ul><li>Generate or alter outcomes (RNG and math stay certified at the provider)</li><li>Hold balances</li><li>Cache play results beyond the idempotency window</li></ul></div>
+  <div class="card"><h4>Connector interface</h4>
+<pre class="shape"><span class="k">interface</span> ProviderConnector {
+  id: string
+  init(launch): Promise&lt;CanonicalInit&gt;
+  play(s, cmd): Promise&lt;PlayResult&gt;
+  catalog?(): Promise&lt;CatalogGame[]&gt;
+  mapError(e): CanonicalError
+}</pre></div>
+</div>
+
+<!-- PROTOCOL -->
+<h2 id="protocol">5. Canonical protocol</h2>
+<div class="card verdict"><h4>What "canonical protocol" means</h4><p><b>Your own single request/response format</b> that your lobby and games use, no matter which provider is behind. Like a travel plug adapter: your devices (games) have one plug; each country's socket (provider) gets its own adapter (connector). "Canonical" = the one official version you decided on. You design it, you own it.</p></div>
+<div class="grid">
+<div class="card"><h4>Without it — every game must understand every provider</h4>
+<pre class="shape"><span class="c">// Provider A</span>
+{ "nextStep": "freespin",
+  "balance": { "amount": "102.50" } }
+
+<span class="c">// Provider B (example)</span>
+{ "state": "FS", "balanceCents": 10250 }</pre></div>
+<div class="card"><h4>With it — the game sees only your format</h4>
+<pre class="shape">{ "next": { "action": "freespin" },
+  "balance": "102.50" }
+
+<span class="c">// connector A and connector B both</span>
+<span class="c">// translate into exactly this shape</span></pre></div>
+</div>
+<p>Design the canonical protocol as a <b>superset</b> of the current Game API (it is your richest provider and already proven), then add three ideas that make it provider-neutral: <b>one play command</b>, an <b>event list</b> for presentation, and <b>capabilities</b>.</p>
+<div class="grid">
+<div class="card"><h4>Init <span class="pill">POST /v1/sessions</span></h4>
+<pre class="shape">{
+  <span class="k">session</span>: { token, expiresAt, demo },
+  <span class="k">game</span>: {
+    id, provider, title,
+    layout: { reels:[3,3,3,3,3], winType:"lines"|"ways"|"cluster" },
+    symbols: [{ id:"sym5", art:"gem_red", wild, scatter }],
+    paylines?, paytable
+  },
+  <span class="k">money</span>: { balance:"103.00", currency:"USD", decimals:2 },
+  <span class="k">bets</span>: { values:["0.10","0.25"…], default:"0.10" },
+  <span class="k">capabilities</span>: {
+    buyFeature:{ priceMultiplier:100 }, turbo:false,
+    autoplay:{ max:100 }, minSpinMs:2500, realityCheckMin:60
+  },
+  <span class="k">resume</span>: PlayResult | null,   <span class="c">// last round to restore</span>
+  <span class="k">promos</span>: { tournaments:[…], popups:[…] },
+  <span class="k">i18n</span>: { locale, bundles:[…] }
+}</pre></div>
+<div class="card"><h4>Play <span class="pill">POST /v1/play</span></h4>
+<pre class="shape"><span class="c">// request</span>
+{ requestId:"uuid", action:"spin",
+  bet:"0.10", params:{ lines:10 } }
+<span class="c">// action: spin | freespin | buy | respin |</span>
+<span class="c">// cascade | pickBonus | exitBonus | jackpot | pickCell</span>
+
+<span class="c">// response</span>
+{
+  <span class="k">round</span>: { id, status:"open"|"closed" },
+  <span class="k">events</span>: [
+    { type:"reelsStop", reels:[…] },
+    { type:"win", kind:"line", line:2, symbol:"sym3", amount:"0.50" },
+    { type:"featureTriggered", feature:"freespins", count:10 },
+    { type:"bigWin", tier:2 }
+  ],
+  <span class="k">totals</span>: { stepWin:"0.50", roundWin:"0.50" },
+  <span class="k">balance</span>: "102.50",
+  <span class="k">next</span>: { action:"freespin", auto:true, options?:[…] },
+  <span class="k">feature</span>: { freespins:{ left:10, total:10 } },
+  <span class="k">ext</span>: { <span class="c">/* provider/game-specific, optional */</span> }
+}</pre></div>
+</div>
+<div class="grid" style="margin-top:12px">
+  <div class="card"><h4>Why an event list</h4><p>Snapshots force the client to diff states and know each provider's quirks. Ordered events (<code>reelsStop → cascade → win → featureTriggered</code>) let one renderer play any provider's round by mapping events to animations.</p></div>
+  <div class="card"><h4>Why one <code>/play</code></h4><p>Different providers split actions across different endpoints. A single command with <code>action</code> keeps the client's <code>next</code> loop identical everywhere; connectors route to the real endpoint.</p></div>
+  <div class="card"><h4>Why capabilities</h4><p>Features and jurisdiction rules (e.g. UK: 2.5 s minimum spin, no autoplay or turbo) are decided once on the server. The client just obeys flags — no per-operator builds.</p></div>
+  <div class="card"><h4>Escape hatch: <code>ext</code></h4><p>Avoids a lowest-common-denominator protocol. Game-specific data (Dark Portal modes, TapTap hash) travels in <code>ext</code>; only that game's feature module reads it.</p></div>
+</div>
+<h3>Canonical error taxonomy</h3>
+<div class="tbl"><table>
+<tr><th>Canonical code</th><th>Severity</th><th>Client behaviour</th><th>Game API today</th></tr>
+<tr><td><code>INSUFFICIENT_FUNDS</code></td><td>recoverable</td><td>Dialog, lower bet</td><td>3</td></tr>
+<tr><td><code>SESSION_EXPIRED</code></td><td>fatal</td><td>Session-over screen</td><td>109</td></tr>
+<tr><td><code>SESSION_TAKEN_OVER</code></td><td>fatal</td><td>"Opened on another device"</td><td>112</td></tr>
+<tr><td><code>INVALID_BET</code></td><td>recoverable</td><td>Reset to default bet</td><td>4, 106, 108</td></tr>
+<tr><td><code>ACTION_NOT_ALLOWED</code></td><td>fatal → re-init</td><td>Re-init and resume from <code>resume</code></td><td>100–105, 107, 110, 115</td></tr>
+<tr><td><code>GEO_BLOCKED</code> / <code>CURRENCY_UNSUPPORTED</code></td><td>fatal</td><td>Blocking screen</td><td>111 / 9</td></tr>
+<tr><td><code>PROVIDER_UNAVAILABLE</code></td><td>retryable</td><td>Retry with same <code>requestId</code></td><td>timeouts, 5xx</td></tr>
+<tr><td><code>LOCALE_FALLBACK</code></td><td>info</td><td>Silent</td><td>300</td></tr>
+</table></div>
+<p style="font-size:13px;color:var(--ink-2)">Every canonical error also carries <code>providerCode</code> and a localized <code>message</code> for support and logs.</p>
+
+<!-- MAPPING -->
+<h2 id="mapping">6. Provider mapping example</h2>
+<p>How two connectors fill the same canonical fields. <span class="hyp">Provider B is a made-up example to show typical differences.</span></p>
+<div class="tbl"><table>
+<tr><th>Canonical</th><th>Connector A — current Game API</th><th>Connector B — example RGS</th></tr>
+<tr><td><code>session.token</code></td><td>Gateway token → <code>sessionKey</code> + <code>fingerprint</code> kept in Redis</td><td>Gateway token → provider JWT kept in Redis</td></tr>
+<tr><td><code>next.action</code></td><td><code>nextStep</code> (<code>avalanche</code> → <code>cascade</code>)</td><td><code>state: "FS"</code> → <code>freespin</code></td></tr>
+<tr><td><code>balance</code></td><td><code>balance.amount</code> numeric string</td><td><code>balanceCents: 10250</code> → <code>"102.50"</code></td></tr>
+<tr><td><code>events[win]</code></td><td><code>winLines[]</code> / <code>winWays[]</code> / <code>wins[]</code></td><td><code>payouts[]</code></td></tr>
+<tr><td><code>game.symbols[].art</code></td><td><code>slot.params.symbols[].name</code></td><td>Numeric symbol IDs + mapping table</td></tr>
+<tr><td><code>feature.freespins</code></td><td><code>extra.freespins / totalFreespins</code></td><td><code>fsLeft / fsTotal</code></td></tr>
+<tr><td><code>SESSION_TAKEN_OVER</code></td><td><code>112</code></td><td><code>"DUPLICATE_SESSION"</code></td></tr>
+<tr><td>Bet</td><td>Per-line <code>bet</code> × <code>lines</code></td><td>Total stake only → derive per line</td></tr>
+</table></div>
+
+<!-- PLAY FLOW -->
+<h2 id="play">7. Play flow with idempotency</h2>
+<p>Money moves on every play, so a retry after a network drop must not place a second bet. The client generates a <code>requestId</code> per action; the gateway stores the result for a short window.</p>
+<div class="card diagram">
+<svg viewBox="0 0 900 470" role="img" aria-label="Play sequence with idempotency">
+  <defs>
+    <marker id="s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0L10,5L0,10z"/></marker>
+    <marker id="sa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head-acc" d="M0,0L10,5L0,10z"/></marker>
+  </defs>
+  <rect class="box client" x="80" y="20" width="140" height="40" rx="8"/><text x="150" y="45" text-anchor="middle" font-weight="600">Game client</text>
+  <rect class="box core" x="380" y="20" width="140" height="40" rx="8"/><text x="450" y="45" text-anchor="middle" font-weight="600">Gateway</text>
+  <rect class="box prov" x="680" y="20" width="140" height="40" rx="8"/><text x="750" y="45" text-anchor="middle" font-weight="600">Provider</text>
+  <line class="life" x1="150" y1="60" x2="150" y2="460"/>
+  <line class="life" x1="450" y1="60" x2="450" y2="460"/>
+  <line class="life" x1="750" y1="60" x2="750" y2="460"/>
+
+  <path class="edge" d="M150,95 L448,95" marker-end="url(#s)"/>
+  <text x="300" y="88" text-anchor="middle" class="mono">POST /play {action:spin, requestId:r1}</text>
+
+  <rect class="note" x="460" y="108" width="270" height="26" rx="5"/>
+  <text x="595" y="125" text-anchor="middle" class="sub">r1 not seen · check rules &amp; capabilities</text>
+
+  <path class="edge" d="M450,160 L748,160" marker-end="url(#s)"/>
+  <text x="600" y="153" text-anchor="middle" class="mono">native call (e.g. POST /spin + fingerprint)</text>
+  <path class="edge dash" d="M750,200 L452,200" marker-end="url(#s)"/>
+  <text x="600" y="193" text-anchor="middle" class="sub">provider response (nextStep, winLines…)</text>
+
+  <rect class="note" x="460" y="214" width="270" height="26" rx="5"/>
+  <text x="595" y="231" text-anchor="middle" class="sub">map → canonical · store r1 result · audit log</text>
+
+  <path class="edge dash" d="M450,268 L152,268" marker-end="url(#s)"/>
+  <text x="300" y="261" text-anchor="middle" class="sub">200 · round, events[], balance, next</text>
+
+  <rect class="band" x="60" y="290" width="480" height="30" rx="6"/>
+  <text x="300" y="310" text-anchor="middle" class="sub">response lost on mobile network → client retries with the SAME requestId</text>
+
+  <path class="edge" d="M150,355 L448,355" marker-end="url(#s)"/>
+  <text x="300" y="348" text-anchor="middle" class="mono">POST /play {requestId:r1}</text>
+  <path class="edge acc" d="M450,400 L152,400" marker-end="url(#sa)"/>
+  <text x="300" y="393" text-anchor="middle" class="sub acctxt">200 · stored result for r1 — no second bet</text>
+  <text x="600" y="400" text-anchor="middle" class="sub">provider not called</text>
+  <text x="450" y="445" text-anchor="middle" class="sub">If the gateway itself lost the result, it asks the provider for the last round (Game API: init → lastSpin) instead of replaying the bet.</text>
+</svg>
+</div>
+
+<!-- GENERIC CLIENT -->
+<h2 id="client">8. Making the game client truly generic</h2>
+<p>A connector can translate the API, but the <b>art</b> still has to match the outcome. "Same game on another provider" only works if that provider runs the same (licensed / white-label) math, or the client is a data-driven engine configured by <code>init</code>.</p>
+<div class="grid">
+  <div class="card"><h4>Data-driven layout</h4><p>Reel count and heights, win type (lines / ways / cluster), paylines and paytable all come from <code>init.game</code>. No per-provider builds.</p></div>
+  <div class="card"><h4>Symbol registry</h4><p><code>symbols[].art</code> points to a sprite or Spine skin. The gateway holds a mapping table per provider × game (provider symbol ID → our art key).</p></div>
+  <div class="card"><h4>Feature modules</h4><p>Freespins, cascade, hold &amp; win, pick bonus, wheel, jackpot field, mode switch. Each is a plug-in that listens to its events and reads its <code>ext</code> data.</p></div>
+  <div class="card"><h4>Event player</h4><p>The renderer walks <code>events[]</code> in order and maps each type to an animation. Unknown event types are skipped and logged — a new provider can't crash the client.</p></div>
+</div>
+<div class="card">
+<pre class="shape"><span class="k">interface</span> GameTransport {             <span class="c">// the client's only dependency</span>
+  init(launch): Promise&lt;CanonicalInit&gt;
+  play(cmd: PlayCommand): Promise&lt;PlayResult&gt;
+  tournaments(): Promise&lt;Tournament[]&gt;
+}
+<span class="c">// GatewayTransport  → production</span>
+<span class="c">// MockTransport     → replays recorded rounds (dev, tests, demos)</span>
+<span class="c">// DirectTransport   → optional, browser-safe provider; also Phase 0 for the current Game API</span></pre>
+</div>
+
+<!-- LOBBY -->
+<h2 id="lobby">9. Lobby aggregation</h2>
+<p>The lobby reads one catalog from the gateway, which merges all providers' game lists into a single format.</p>
+<div class="grid">
+<div class="card"><h4>Unified catalog item</h4>
+<pre class="shape">{
+  id: "prov-a:gameone",
+  provider: "prov-a",
+  title, thumbnails, tags,
+  rtp: "95.50", volatility: "high",
+  features: ["freespins","buy"],
+  clientId: "gameone",   <span class="c">// which of OUR client builds to load</span>
+  jurisdictions: ["MT","SE"]
+}</pre></div>
+<div class="card"><h4>One kind of game</h4><ul>
+  <li>Every game uses <b>our client</b> and goes through <b>our gateway</b>; providers only supply the math.</li>
+  <li>Launch always returns <i>our</i> game URL with a gateway token.</li>
+  <li>No provider-built clients or provider URLs in the lobby.</li>
+</ul></div>
+<div class="card"><h4>Lobby features this unlocks</h4><ul>
+  <li>Cross-provider search, filters by feature, volatility, RTP</li>
+  <li>Recently played and favourites across providers</li>
+  <li>Cross-provider tournaments (gateway sees every round)</li>
+  <li>Per-operator catalog rules and geo filtering in one place</li>
+</ul></div>
+</div>
+
+<h3>Who owns what</h3>
+<div class="tbl"><table>
+<tr><th>Part</th><th>Owner</th></tr>
+<tr><td>Game client (graphics, animations, HUD)</td><td>Us — React + PixiJS, URL on our domain <code>games.yoursite.com/&lt;clientId&gt;</code></td></tr>
+<tr><td>Lobby, catalog, launch</td><td>Us — via the gateway</td></tr>
+<tr><td>Every spin / play action</td><td>Us — client → gateway → connector</td></tr>
+<tr><td>Math, RNG, spin outcomes</td><td>Provider</td></tr>
+<tr><td>Money (debit / credit)</td><td>Provider ↔ operator wallet</td></tr>
+</table></div>
+<p style="font-size:13px;color:var(--ink-2)">Result: full control over UI, tournaments and analytics for every game, at the cost of building a client (or reusing one by <code>clientId</code>) for each game before it can be listed.</p>
+
+<!-- FRUIT STORM EXAMPLE -->
+<h2 id="fruitstorm">9b. Example — Fruit Storm from two providers</h2>
+<p>Fruit Storm is offered by Provider A (current Game API) and Provider B. The lobby shows it twice. Both cards open <b>the same client with the same art</b>; the gateway token decides which provider plays the round. <span class="hyp">Provider B's API shapes are made up for illustration.</span></p>
+
+<div class="card diagram">
+<svg viewBox="0 0 900 460" role="img" aria-label="Fruit Storm from two providers">
+  <defs>
+    <marker id="fs" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0L10,5L0,10z"/></marker>
+    <marker id="fsa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head-acc" d="M0,0L10,5L0,10z"/></marker>
+  </defs>
+  <!-- lobby -->
+  <rect class="box client" x="40" y="20" width="400" height="96" rx="10"/>
+  <text x="56" y="40" class="lbl" style="fill:var(--ok)">LOBBY</text>
+  <rect class="box" x="60" y="50" width="170" height="56" rx="8"/>
+  <text x="145" y="73" text-anchor="middle" font-weight="600">🍒 Fruit Storm</text>
+  <text x="145" y="92" text-anchor="middle" class="sub">Provider A · RTP 95.50%</text>
+  <rect class="box" x="250" y="50" width="170" height="56" rx="8"/>
+  <text x="335" y="73" text-anchor="middle" font-weight="600">🍒 Fruit Storm</text>
+  <text x="335" y="92" text-anchor="middle" class="sub">Provider B · RTP 96.20%</text>
+
+  <!-- client -->
+  <rect class="box client" x="520" y="20" width="340" height="96" rx="10"/>
+  <text x="690" y="50" text-anchor="middle" font-weight="600">Fruit Storm client (one build)</text>
+  <text x="690" y="70" text-anchor="middle" class="sub mono">games.yoursite.com/fruitstorm?token=…</text>
+  <text x="690" y="90" text-anchor="middle" class="sub">same art · doesn't know the provider</text>
+  <path class="edge" d="M440,68 L518,68" marker-end="url(#fs)"/>
+  <text x="479" y="60" text-anchor="middle" class="sub">launch</text>
+
+  <!-- gateway -->
+  <rect class="frame" x="30" y="150" width="840" height="110" rx="12"/>
+  <text x="46" y="168" class="lbl">GAME GATEWAY</text>
+  <rect class="box core" x="60" y="180" width="300" height="66" rx="8"/>
+  <text x="210" y="200" text-anchor="middle" font-weight="600">Token map (Redis)</text>
+  <text x="210" y="218" text-anchor="middle" class="sub mono">gw_a1 → prov-a · sessionKey+fp</text>
+  <text x="210" y="234" text-anchor="middle" class="sub mono">gw_b7 → prov-b · session B-77</text>
+  <rect class="box" x="400" y="180" width="200" height="66" rx="8"/>
+  <text x="500" y="206" text-anchor="middle" font-weight="600">Connector A</text>
+  <text x="500" y="226" text-anchor="middle" class="sub">mapper-A</text>
+  <rect class="box" x="640" y="180" width="200" height="66" rx="8"/>
+  <text x="740" y="206" text-anchor="middle" font-weight="600">Connector B</text>
+  <text x="740" y="226" text-anchor="middle" class="sub">mapper-B + symbol table</text>
+  <path class="edge acc" d="M690,116 L690,148" marker-end="url(#fsa)"/>
+  <text x="698" y="138" class="sub acctxt">POST /v1/play (canonical, same for A and B)</text>
+  <path class="edge dash" d="M360,213 L398,213" marker-end="url(#fs)"/>
+
+  <!-- providers -->
+  <path class="edge" d="M500,246 L500,298" marker-end="url(#fs)"/>
+  <path class="edge" d="M740,246 L740,298" marker-end="url(#fs)"/>
+  <rect class="box prov" x="400" y="300" width="200" height="60" rx="8"/>
+  <text x="500" y="324" text-anchor="middle" font-weight="600">Provider A</text>
+  <text x="500" y="344" text-anchor="middle" class="sub mono">POST /game/{key}/spin</text>
+  <rect class="box prov" x="640" y="300" width="200" height="60" rx="8"/>
+  <text x="740" y="324" text-anchor="middle" font-weight="600">Provider B</text>
+  <text x="740" y="344" text-anchor="middle" class="sub mono">POST /rgs/round + HMAC</text>
+
+  <!-- result -->
+  <path class="edge dash" d="M500,360 L500,388" marker-end="url(#fs)"/>
+  <path class="edge dash" d="M740,360 L740,388" marker-end="url(#fs)"/>
+  <rect class="box core" x="40" y="390" width="820" height="56" rx="8"/>
+  <text x="450" y="413" text-anchor="middle" font-weight="600">Different native answers → one canonical result to the client</text>
+  <text x="450" y="432" text-anchor="middle" class="sub mono">{ next:{action:"freespin"}, balance:"102.50", ext.fruitStorm.meter:{current:5,target:8} }</text>
+</svg>
+</div>
+
+<h3>Step 1 — catalog returns two entries</h3>
+<div class="grid">
+<div class="card">
+<pre class="shape">[
+  {
+    "id": <span class="k">"prov-a:fruitstorm"</span>,
+    "title": "Fruit Storm",
+    "provider": { "id": "prov-a", "name": "Provider A" },
+    "clientId": <span class="k">"fruitstorm"</span>,
+    "rtp": "95.50",
+    "features": ["freespins", "buy"]
+  },
+  {
+    "id": <span class="k">"prov-b:fruitstorm"</span>,
+    "title": "Fruit Storm",
+    "provider": { "id": "prov-b", "name": "Provider B" },
+    "clientId": <span class="k">"fruitstorm"</span>,
+    "rtp": "96.20",
+    "features": ["freespins"]
+  }
+]</pre></div>
+<div class="card"><h4>Read it like this</h4><ul>
+  <li><code>id</code> is unique per provider → the same game can be listed twice</li>
+  <li><code>clientId</code> is the same → both cards load the same client and art</li>
+  <li>RTP, features, bet limits <b>can differ</b> — same name ≠ same deal. B has no buy bonus, so the client hides the Buy button from capabilities</li>
+  <li>Lobby card shows a provider badge and RTP so players can tell them apart</li>
+  <li>Optional UX: group them into one card with a provider switch</li>
+</ul></div>
+</div>
+
+<h3>Step 2 — launch: same URL, different provider behind the token</h3>
+<div class="grid">
+<div class="card"><h4>Fruit Storm A</h4>
+<pre class="shape">POST /v1/launch { "gameId": "prov-a:fruitstorm" }
+→ { "url": ".../fruitstorm?token=<span class="k">gw_a1</span>" }
+
+<span class="c">// gateway opened a session at Provider A</span>
+<span class="c">// Redis: gw_a1 → prov-a, sessionKey, fingerprint</span></pre></div>
+<div class="card"><h4>Fruit Storm B</h4>
+<pre class="shape">POST /v1/launch { "gameId": "prov-b:fruitstorm" }
+→ { "url": ".../fruitstorm?token=<span class="k">gw_b7</span>" }
+
+<span class="c">// gateway opened a session at Provider B</span>
+<span class="c">// Redis: gw_b7 → prov-b, session B-77</span></pre></div>
+</div>
+
+<h3>Step 3 — spin: identical from the client</h3>
+<div class="card">
+<pre class="shape">POST /v1/play
+{ "requestId": "r1", "action": "spin", "bet": "1", "params": { "lines": 10 } }</pre></div>
+<div class="grid">
+<div class="card"><h4>Connector A sends (current Game API)</h4>
+<pre class="shape">POST /api/v1/game/{sessionKey}/spin
+{ "bet": "1", "lines": 10,
+  "fingerprint": "…" }</pre></div>
+<div class="card"><h4>Connector B sends <span class="hyp">(example)</span></h4>
+<pre class="shape">POST /rgs/round
+X-Signature: HMAC…
+{ "session": "B-77", "stake": 1000,
+  "action": "PLAY" }</pre></div>
+</div>
+
+<h3>Step 4 — two different answers, one canonical result</h3>
+<div class="grid">
+<div class="card"><h4>Provider A answers (Fruit Storm fields from the doc)</h4>
+<pre class="shape">{ "nextStep": "freespin", "mode": "freespin",
+  "extra": {
+    "freespins": 3, "totalFreespins": 8,
+    "currentSpinsCount": [
+      { "totalBet": "100", "count": 5 } ],
+    "maxSpinsCount": 8 },
+  "balance": { "amount": "102.50" } }</pre></div>
+<div class="card"><h4>Provider B answers <span class="hyp">(example)</span></h4>
+<pre class="shape">{ "state": "FS",
+  "fsLeft": 3, "fsTotal": 8,
+  "bonusMeter": { "10000": 5 },
+  "meterTarget": 8,
+  "balanceCents": 10250 }</pre></div>
+<div class="card verdict"><h4>Client receives — identical for A and B</h4>
+<pre class="shape">{
+  "next": { "action": "freespin", "auto": true },
+  "balance": "102.50",
+  "feature": { "freespins": { "left": 3, "total": 8 } },
+  "ext": { "fruitStorm": {
+    "meter": { "current": 5, "target": 8 } } },
+  "events": [ … ]
+}</pre>
+<p style="margin-top:8px">The Fruit Storm bonus-meter module reads <code>ext.fruitStorm.meter</code> and plays the same animation on both providers.</p></div>
+</div>
+
+<h3>Field-by-field mapping for Fruit Storm</h3>
+<div class="tbl"><table>
+<tr><th>Canonical</th><th>From Provider A</th><th>From Provider B <span class="hyp">(example)</span></th></tr>
+<tr><td><code>next.action</code></td><td><code>nextStep: "freespin"</code></td><td><code>state: "FS"</code> → <code>freespin</code></td></tr>
+<tr><td><code>balance</code></td><td><code>balance.amount</code></td><td><code>balanceCents / 100</code></td></tr>
+<tr><td><code>feature.freespins.left / total</code></td><td><code>extra.freespins / totalFreespins</code></td><td><code>fsLeft / fsTotal</code></td></tr>
+<tr><td><code>ext.fruitStorm.meter.current</code></td><td><code>extra.currentSpinsCount[totalBet].count</code></td><td><code>bonusMeter[stakeCents]</code></td></tr>
+<tr><td><code>ext.fruitStorm.meter.target</code></td><td><code>extra.maxSpinsCount</code></td><td><code>meterTarget</code></td></tr>
+<tr><td><code>symbols[].art</code></td><td><code>"sym1"</code> → <code>cherry</code></td><td><code>1</code> → <code>cherry</code> (symbol table in connector B)</td></tr>
+<tr><td><code>capabilities.buyFeature</code></td><td>present (<code>bonusCoefficient</code>)</td><td>absent → Buy button hidden</td></tr>
+</table></div>
+
+<h3>What must be true for "same client, two providers"</h3>
+<div class="grid">
+  <div class="card"><h4>Symbols map to your art</h4><p>Every provider symbol has an entry in that connector's symbol table. Art is chosen by <code>clientId</code> + mapping, never by the provider.</p></div>
+  <div class="card"><h4>Same game layout</h4><p>Same reels (5×3) and same kind of features. If B's version is 6×4 with different features, it is a different game with the same name — it needs its own client build (a separate <code>clientId</code>).</p></div>
+  <div class="card"><h4>Certification</h4><p>Check whether your Fruit Storm client may run on Provider B's math in your markets.</p></div>
+</div>
+
+
+<!-- STACK -->
+<h2 id="stack">10. Suggested stack</h2>
+<div class="tbl"><table>
+<tr><th>Concern</th><th>Choice</th><th>Why</th></tr>
+<tr><td>Gateway runtime</td><td>Bun + Hono, TypeScript</td><td>Same language as the client; share canonical Zod schemas from one package</td></tr>
+<tr><td>Canonical schema</td><td><code>packages/protocol</code> (Zod → TS types + JSON Schema / OpenAPI)</td><td>Single source of truth for client, gateway and partner docs</td></tr>
+<tr><td>Session map &amp; idempotency</td><td>Redis (TTL keys)</td><td>Keeps the gateway stateless and horizontally scalable</td></tr>
+<tr><td>Provider realtime</td><td>WebSocket client inside the connector</td><td>Client stays on HTTP; add WS push only for balance / tournament updates</td></tr>
+<tr><td>Resilience</td><td>Timeouts, retries with the same round reference, circuit breaker per provider</td><td>One slow provider must not slow the others</td></tr>
+<tr><td>Observability</td><td>OpenTelemetry traces with <code>provider</code>, <code>gameId</code>, <code>roundId</code></td><td>Per-provider latency and error dashboards</td></tr>
+<tr><td>Audit</td><td>Append-only round log (request, native response, canonical response)</td><td>Disputes, replay into MockTransport, regression fixtures</td></tr>
+<tr><td>Testing</td><td>Contract tests per connector against recorded fixtures</td><td>The Game API doc examples become Connector A's first fixtures</td></tr>
+<tr><td>Storage</td><td>Postgres (lobby registry, profiles, audit log)</td><td>Relational data and the append-only round log; managed with backups from staging up</td></tr>
+<tr><td>Deployment</td><td>Containers in the providers' region</td><td>Keeps the extra hop small</td></tr>
+<tr><td>Environments</td><td>Dev on free tiers (Oracle VM + Docker Compose, Cloudflare Pages + R2); staging and prod on paid servers with managed Redis HA and Postgres</td><td>Same images and config everywhere, only size and env vars change. Setup steps: <a href="free-dev-infrastructure.html">Free Dev Infrastructure</a></td></tr>
+<tr><td>Continuous delivery</td><td>Dev: GitHub Actions → GHCR → SSH + Compose. Staging / prod: Argo CD syncing Kubernetes manifests from Git</td><td>Same image promoted by tag; rollback is a Git revert; prod syncs on manual approval</td></tr>
+</table></div>
+
+<!-- ROADMAP -->
+<h2 id="roadmap">11. Roadmap</h2>
+<p>Each phase ships on its own; no big-bang rewrite.</p>
+<div class="grid">
+  <div class="card phase"><div class="num">PHASE 0</div><h4>Protocol + transport port</h4><p>Define <code>packages/protocol</code>. Client codes against <code>GameTransport</code>. Ship a <b>DirectTransport</b> that converts the current Game API in the browser, plus MockTransport. No new servers.</p></div>
+  <div class="card phase"><div class="num">PHASE 1</div><h4>Gateway with Connector A</h4><p>Stand up the gateway, move the Game API mapping server-side, add Redis session map and <code>requestId</code> idempotency. Switch clients to GatewayTransport. Runs on the <a href="free-dev-infrastructure.html">free dev stack</a>.</p></div>
+  <div class="card phase"><div class="num">PHASE 2</div><h4>Second provider + catalog</h4><p>Add Connector B, unified catalog, symbol mapping tables so existing clients (e.g. Fruit Storm) run on Provider B.</p></div>
+  <div class="card phase"><div class="num">PHASE 3</div><h4>Hardening</h4><p>Capabilities per jurisdiction, circuit breakers, audit replay tooling, cross-provider tournaments, WS push.</p></div>
+  <div class="card phase"><div class="num">PHASE 4</div><h4>Paid staging + prod</h4><p>Move to Kubernetes in the providers' region with managed Redis HA and Postgres. Deploy with Argo CD from Git: one Application per environment, auto-sync for staging, manual sync for prod.</p></div>
+</div>
+
+<!-- RISKS -->
+<h2 id="risks">12. Risks</h2>
+<div class="tbl"><table>
+<tr><th>Risk</th><th>Mitigation</th></tr>
+<tr><td>Lowest-common-denominator protocol</td><td>Superset of the richest provider + <code>ext</code> escape hatch + feature modules</td></tr>
+<tr><td>Certification / compliance</td><td>Some markets certify the game client per provider and game. Check with each provider and test lab before reusing one client across RGSs</td></tr>
+<tr><td>Gateway as a single point of failure</td><td>Stateless instances, Redis HA, per-provider circuit breakers, health checks</td></tr>
+<tr><td>Double bets on retry</td><td><code>requestId</code> idempotency + "last round" recovery from the provider</td></tr>
+<tr><td>Mapping drift when a provider changes its API</td><td>Contract tests on recorded fixtures in CI; schema validation with alerts in production</td></tr>
+<tr><td>Extra latency</td><td>Deploy close to providers; keep gateway logic thin; measure p95 per provider</td></tr>
+<tr><td>Device binding semantics differ</td><td>Gateway issues its own per-device token; provider fingerprints never reach the browser</td></tr>
+</table></div>
+
+<footer>Proposal · 2026-11-21 · updated 2026-11-24 · <a href="index.html">API architecture</a> · <a href="free-dev-infrastructure.html">Free dev infrastructure</a></footer>
+</main>
+</body>
+</html>

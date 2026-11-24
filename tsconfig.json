@@ -1,0 +1,32 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./apps/lobby"
+    },
+    {
+      "path": "./apps/games/gameone"
+    },
+    {
+      "path": "./packages/protocol"
+    },
+    {
+      "path": "./packages/game-core"
+    },
+    {
+      "path": "./packages/i18n"
+    },
+    {
+      "path": "./packages/hud"
+    },
+    {
+      "path": "./packages/lobby-kit"
+    },
+    {
+      "path": "./packages/renderer"
+    }
+  ],
+  "compilerOptions": {}
+}

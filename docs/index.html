@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Front API Architecture</title>
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#1b1d21; --ink-2:#555b66; --line:#d9dbe0;
+  --accent:#2f5bd3; --accent-soft:#e6edfc; --ok:#1f8a4c; --ok-soft:#e3f4ea;
+  --warn:#a86300; --warn-soft:#fbf0dc; --bad:#c2352b; --bad-soft:#fbe5e3;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121417; --surface:#1b1e23; --ink:#e8eaed; --ink-2:#a2a8b3; --line:#30353d;
+    --accent:#7aa2ff; --accent-soft:#1f2a44; --ok:#5cc98a; --ok-soft:#173022;
+    --warn:#e6a64a; --warn-soft:#352812; --bad:#ff7b70; --bad-soft:#3a1a18;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121417; --surface:#1b1e23; --ink:#e8eaed; --ink-2:#a2a8b3; --line:#30353d;
+  --accent:#7aa2ff; --accent-soft:#1f2a44; --ok:#5cc98a; --ok-soft:#173022;
+  --warn:#e6a64a; --warn-soft:#352812; --bad:#ff7b70; --bad-soft:#3a1a18;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:28px;margin:0 0 4px}
+h2{font-size:20px;margin:48px 0 6px;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:15px;margin:20px 0 6px}
+p.lead{color:var(--ink-2);margin:0 0 20px;max-width:760px}
+p{max-width:820px}
+code{font-family:var(--mono);font-size:.86em;background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 8px}
+nav a{font-size:13px;color:var(--accent);text-decoration:none;border:1px solid var(--line);background:var(--surface);padding:4px 10px;border-radius:999px}
+nav a:hover{border-color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
+.diagram{overflow-x:auto}
+.diagram svg{display:block;width:100%;min-width:640px;height:auto}
+svg text{fill:var(--ink);font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+svg .sub{fill:var(--ink-2);font-size:11.5px}
+svg .mono{font-family:var(--mono);font-size:12px}
+svg .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+svg .box.core{fill:var(--accent-soft);stroke:var(--accent)}
+svg .box.opt{stroke-dasharray:5 4}
+svg .edge{stroke:var(--ink-2);stroke-width:1.5;fill:none}
+svg .edge.dash{stroke-dasharray:5 4}
+svg .edge.bad{stroke:var(--bad)}
+svg .edge.accent{stroke:var(--accent)}
+svg .life{stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 4}
+svg .head{fill:var(--ink-2)} svg .head-bad{fill:var(--bad)} svg .head-acc{fill:var(--accent)}
+svg .badtxt{fill:var(--bad)}
+svg .band{fill:var(--warn-soft);stroke:var(--warn);stroke-dasharray:4 4}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.grid .card{margin:0}
+.card h4{margin:0 0 6px;font-size:14px}
+.card p,.card ul{margin:0;font-size:14px;color:var(--ink-2)}
+.card ul{padding-left:18px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2)}
+td code{white-space:nowrap}
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.m{font-family:var(--mono);font-size:12px;font-weight:600;padding:2px 6px;border-radius:4px}
+.m.get{color:var(--ok);background:var(--ok-soft)} .m.post{color:var(--accent);background:var(--accent-soft)}
+.lvl{font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.03em}
+.lvl.CRITICAL{color:var(--bad);background:var(--bad-soft)}
+.lvl.ALERT{color:var(--warn);background:var(--warn-soft)}
+.lvl.WARNING{color:var(--ok);background:var(--ok-soft)}
+.shape{font-family:var(--mono);font-size:12.5px;line-height:1.7;white-space:pre;overflow-x:auto;margin:0;color:var(--ink)}
+.shape .k{color:var(--accent)} .shape .c{color:var(--ink-2)}
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent);margin-left:6px;vertical-align:middle}
+.gotchas li{margin:6px 0}
+footer{margin-top:48px;color:var(--ink-2);font-size:13px}
+</style>
+</head>
+<body>
+<main>
+<h1>Game Front API — Architecture</h1>
+<p class="lead">How the game client talks to the backend: session binding, the server-driven step machine, response composition, game-specific state variants and the error model. Source: <code>Game Front API.md</code>.</p>
+
+<nav>
+  <a href="#context">System context</a>
+  <a href="#session">Session lifecycle</a>
+  <a href="#flow">Game flow</a>
+  <a href="#endpoints">Endpoints</a>
+  <a href="#state">Response model</a>
+  <a href="#variants">Game variants</a>
+  <a href="#lobby">Lobby &amp; handoff</a>
+  <a href="#errors">Error model</a>
+  <a href="#gotchas">Client gotchas</a>
+  <a href="frontend-architecture.html">Frontend proposal →</a>
+</nav>
+
+<!-- ============ CONTEXT ============ -->
+<h2 id="context">1. System context</h2>
+<p>The client is a thin renderer. All game math, balance and step sequencing live on the server; the client only knows the <code>sessionKey</code> from the launch URL and the <code>fingerprint</code> from init.</p>
+<div class="card diagram">
+<svg viewBox="0 0 900 380" role="img" aria-label="System context diagram">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0L10,5L0,10z"/></marker>
+    <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head-acc" d="M0,0L10,5L0,10z"/></marker>
+  </defs>
+  <!-- operator -->
+  <rect class="box" x="20" y="150" width="170" height="70" rx="8"/>
+  <text x="105" y="180" text-anchor="middle" font-weight="600">Operator site</text>
+  <text x="105" y="200" text-anchor="middle" class="sub">casino / partner</text>
+  <!-- client -->
+  <rect class="box core" x="300" y="140" width="200" height="90" rx="8"/>
+  <text x="400" y="172" text-anchor="middle" font-weight="600">Game client</text>
+  <text x="400" y="192" text-anchor="middle" class="sub">holds sessionKey + fingerprint</text>
+  <text x="400" y="210" text-anchor="middle" class="sub">renders state, follows nextStep</text>
+  <!-- API -->
+  <rect class="box core" x="640" y="130" width="230" height="110" rx="8"/>
+  <text x="755" y="160" text-anchor="middle" font-weight="600">Game API  /api/v1</text>
+  <text x="755" y="180" text-anchor="middle" class="sub">session · math · balance</text>
+  <text x="755" y="198" text-anchor="middle" class="sub">tournaments · lobby · stats</text>
+  <text x="755" y="216" text-anchor="middle" class="sub">screenshots · socials</text>
+  <!-- CDN -->
+  <rect class="box" x="640" y="20" width="230" height="64" rx="8"/>
+  <text x="755" y="47" text-anchor="middle" font-weight="600">CDN</text>
+  <text x="755" y="66" text-anchor="middle" class="sub">translations · currency icons</text>
+  <!-- realtime -->
+  <rect class="box opt" x="640" y="290" width="230" height="70" rx="8"/>
+  <text x="755" y="318" text-anchor="middle" font-weight="600">Realtime math service</text>
+  <text x="755" y="338" text-anchor="middle" class="sub">optional · http + socket</text>
+  <!-- operator wallet -->
+  <rect class="box opt" x="20" y="290" width="170" height="70" rx="8"/>
+  <text x="105" y="318" text-anchor="middle" font-weight="600">Operator platform</text>
+  <text x="105" y="338" text-anchor="middle" class="sub">wallet · freespins grants</text>
+
+  <!-- edges -->
+  <path class="edge" d="M190,185 L298,185" marker-end="url(#a)"/>
+  <text x="244" y="172" text-anchor="middle" class="sub">launch url</text>
+  <text x="244" y="204" text-anchor="middle" class="sub mono">?sessionKey</text>
+
+  <path class="edge accent" d="M500,185 L638,185" marker-end="url(#aa)" marker-start="url(#aa)"/>
+  <text x="569" y="172" text-anchor="middle" class="sub">REST / JSON</text>
+  <text x="569" y="204" text-anchor="middle" class="sub">fingerprint in POST</text>
+
+  <path class="edge" d="M460,140 L640,60" marker-end="url(#a)"/>
+  <text x="520" y="88" class="sub mono">translationsUrl</text>
+
+  <path class="edge dash" d="M460,230 L640,322" marker-end="url(#a)"/>
+  <text x="500" y="300" class="sub mono">init.server.{http,socket}</text>
+
+  <path class="edge dash" d="M640,240 C520,350 320,350 192,325" marker-end="url(#a)"/>
+  <text x="400" y="372" text-anchor="middle" class="sub">debit / credit, operator freespins (behind API)</text>
+</svg>
+</div>
+<p style="font-size:13px;color:var(--ink-2)">Dashed = optional or not exposed to the client. The operator-platform link is inferred from <code>balance</code>, <code>externalFreespins</code> and the pass-through <code>spinSpeed</code>; the doc does not describe it directly.</p>
+
+<!-- ============ SESSION ============ -->
+<h2 id="session">2. Session lifecycle &amp; device binding</h2>
+<p>Game init issues a new <code>fingerprint</code> on every call and invalidates the previous one. That is the single-device lock: opening the game again kills the first copy with error <b>112</b>. Call init once per game start, not before each action.</p>
+<div class="card diagram">
+<svg viewBox="0 0 900 500" role="img" aria-label="Session sequence diagram">
+  <defs>
+    <marker id="s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0L10,5L0,10z"/></marker>
+    <marker id="sb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head-bad" d="M0,0L10,5L0,10z"/></marker>
+  </defs>
+  <rect class="box core" x="80" y="20" width="140" height="40" rx="8"/><text x="150" y="45" text-anchor="middle" font-weight="600">Device A</text>
+  <rect class="box core" x="380" y="20" width="140" height="40" rx="8"/><text x="450" y="45" text-anchor="middle" font-weight="600">Game API</text>
+  <rect class="box" x="680" y="20" width="140" height="40" rx="8"/><text x="750" y="45" text-anchor="middle" font-weight="600">Device B</text>
+  <line class="life" x1="150" y1="60" x2="150" y2="490"/>
+  <line class="life" x1="450" y1="60" x2="450" y2="490"/>
+  <line class="life" x1="750" y1="60" x2="750" y2="490"/>
+
+  <path class="edge" d="M150,95 L448,95" marker-end="url(#s)"/>
+  <text x="300" y="88" text-anchor="middle" class="mono">GET /game/{sessionKey}</text>
+  <path class="edge dash" d="M450,135 L152,135" marker-end="url(#s)"/>
+  <text x="300" y="128" text-anchor="middle" class="sub">200 · fingerprint F1, slot, bets, lastSpin, balance</text>
+
+  <path class="edge" d="M150,175 L448,175" marker-end="url(#s)"/>
+  <text x="300" y="168" text-anchor="middle" class="mono">POST /stat/loaded</text>
+
+  <path class="edge" d="M150,215 L448,215" marker-end="url(#s)"/>
+  <text x="300" y="208" text-anchor="middle" class="mono">POST /spin {bet, lines, fingerprint:F1}</text>
+  <path class="edge dash" d="M450,255 L152,255" marker-end="url(#s)"/>
+  <text x="300" y="248" text-anchor="middle" class="sub">200 · game state + balance, nextStep</text>
+
+  <rect class="band" x="60" y="272" width="480" height="30" rx="6"/>
+  <text x="300" y="292" text-anchor="middle" class="sub">loop: call the endpoint named by nextStep</text>
+
+  <path class="edge" d="M750,335 L452,335" marker-end="url(#s)"/>
+  <text x="600" y="328" text-anchor="middle" class="mono">GET /game/{sessionKey}</text>
+  <path class="edge dash" d="M450,375 L748,375" marker-end="url(#s)"/>
+  <text x="600" y="368" text-anchor="middle" class="sub">200 · fingerprint F2 (F1 now invalid)</text>
+
+  <path class="edge" d="M150,415 L448,415" marker-end="url(#s)"/>
+  <text x="300" y="408" text-anchor="middle" class="mono">POST /spin {fingerprint:F1}</text>
+  <path class="edge bad" d="M450,455 L152,455" marker-end="url(#sb)"/>
+  <text x="300" y="448" text-anchor="middle" class="sub badtxt">422 · errorCode 112 "Game already opened in other device"</text>
+</svg>
+</div>
+<div class="grid">
+  <div class="card"><h4>Demo session</h4><p>Never expires. <code>user</code> is null, tournaments are empty, screenshots are not stored.</p></div>
+  <div class="card"><h4>Real-money session</h4><p>Expires 1 month after the last action (1 week for some operators). Every action slides the deadline.</p></div>
+  <div class="card"><h4>Expired → 109</h4><p>POST actions: http 422. Game init: inside the 200 payload. Unknown key: http 404.</p></div>
+  <div class="card"><h4>State held by client</h4><p>Action responses don't repeat <code>fingerprint</code> or <code>sessionKey</code> — keep them from init.</p></div>
+</div>
+
+<!-- ============ FLOW ============ -->
+<h2 id="flow">3. Server-driven game flow</h2>
+<p>The client never decides what comes next. Each response carries <code>currentStep</code> (just played) and <code>nextStep</code> (endpoint to call). <code>mode</code> is <code>spin</code> in the base game and <code>freespin</code> during a series. Calling the wrong endpoint is rejected with the step's error code.</p>
+<div class="card diagram">
+<svg viewBox="0 0 900 420" role="img" aria-label="Game step state machine">
+  <defs>
+    <marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0L10,5L0,10z"/></marker>
+  </defs>
+  <!-- edges first -->
+  <path class="edge" d="M450,186 L450,90" marker-end="url(#f)" marker-start="url(#f)"/>
+  <path class="edge" d="M380,190 L250,90" marker-end="url(#f)"/>
+  <path class="edge" d="M262,64 L373,64" marker-end="url(#f)"/>
+  <path class="edge" d="M525,196 L645,110" marker-end="url(#f)" marker-start="url(#f)"/>
+  <path class="edge" d="M527,210 L683,210" marker-end="url(#f)" marker-start="url(#f)"/>
+  <path class="edge" d="M525,226 L640,320" marker-end="url(#f)" marker-start="url(#f)"/>
+  <path class="edge" d="M373,210 L262,210" marker-end="url(#f)"/>
+  <path class="edge" d="M185,236 L185,318" marker-end="url(#f)"/>
+  <path class="edge" d="M272,340 L400,236" marker-end="url(#f)"/>
+
+  <!-- nodes -->
+  <rect class="box core" x="375" y="186" width="150" height="48" rx="8"/>
+  <text x="450" y="207" text-anchor="middle" font-weight="600">spin</text><text x="450" y="224" text-anchor="middle" class="sub mono">POST /spin</text>
+
+  <rect class="box" x="375" y="40" width="150" height="48" rx="8"/>
+  <text x="450" y="61" text-anchor="middle" font-weight="600">freespin</text><text x="450" y="78" text-anchor="middle" class="sub mono">POST /freespin</text>
+
+  <rect class="box" x="110" y="40" width="150" height="48" rx="8"/>
+  <text x="185" y="61" text-anchor="middle" font-weight="600">buy</text><text x="185" y="78" text-anchor="middle" class="sub mono">POST /buy</text>
+
+  <rect class="box" x="645" y="62" width="150" height="48" rx="8"/>
+  <text x="720" y="83" text-anchor="middle" font-weight="600">respin</text><text x="720" y="100" text-anchor="middle" class="sub mono">POST /respin</text>
+
+  <rect class="box" x="685" y="186" width="160" height="48" rx="8"/>
+  <text x="765" y="207" text-anchor="middle" font-weight="600">avalanche</text><text x="765" y="224" text-anchor="middle" class="sub mono">POST /avalanche</text>
+
+  <rect class="box" x="620" y="320" width="220" height="56" rx="8"/>
+  <text x="730" y="342" text-anchor="middle" font-weight="600">jackpot</text><text x="730" y="362" text-anchor="middle" class="sub mono">/jackpot · /open-field-item</text>
+
+  <rect class="box" x="110" y="186" width="150" height="48" rx="8"/>
+  <text x="185" y="207" text-anchor="middle" font-weight="600">bonus</text><text x="185" y="224" text-anchor="middle" class="sub mono">POST /bonus {variant}</text>
+
+  <rect class="box" x="90" y="320" width="190" height="48" rx="8"/>
+  <text x="185" y="341" text-anchor="middle" font-weight="600">getPreviousState</text><text x="185" y="358" text-anchor="middle" class="sub">leave bonus game</text>
+
+  <text x="315" y="54" class="sub" text-anchor="middle">nextStep=freespin</text>
+  <text x="450" y="405" text-anchor="middle" class="sub">Arrows show typical transitions; any step may chain to any other — always obey nextStep.</text>
+</svg>
+</div>
+<div class="tbl"><table>
+<tr><th>nextStep</th><th>Client calls</th><th>Wrong-state error</th></tr>
+<tr><td><code>spin</code></td><td><code>POST /spin</code></td><td>107</td></tr>
+<tr><td><code>freespin</code></td><td><code>POST /freespin</code> — bet comes from the session</td><td>103</td></tr>
+<tr><td><code>buy</code></td><td>Bonus bought; continue with accompanying step (usually freespin)</td><td>102</td></tr>
+<tr><td><code>respin</code></td><td><code>POST /respin</code></td><td>105</td></tr>
+<tr><td><code>avalanche</code></td><td><code>POST /avalanche</code></td><td>100</td></tr>
+<tr><td><code>bonus</code></td><td><code>POST /bonus</code> with a <code>variant</code> key of <code>bonusParameters</code></td><td>101</td></tr>
+<tr><td><code>getPreviousState</code></td><td><code>POST /getPreviousState</code></td><td>110</td></tr>
+<tr><td><code>jackpot</code></td><td><code>POST /jackpot</code>, or <code>/open-field-item {col,row}</code> while <code>jackpotState</code> is open</td><td>104</td></tr>
+<tr><td colspan="3" style="color:var(--ink-2)">Mode mismatch (<code>currentMode</code>) → 115</td></tr>
+</table></div>
+
+<!-- ============ ENDPOINTS ============ -->
+<h2 id="endpoints">4. Endpoint map</h2>
+<p>All paths under <code>/api/v1</code>. Every POST game action needs <code>fingerprint</code> in the body.</p>
+<div class="tbl"><table>
+<tr><th>Area</th><th>Method</th><th>Path</th><th>Purpose</th></tr>
+<tr><td rowspan="2"><b>Session</b></td><td><span class="m get">GET</span></td><td><code>/game/{sessionKey}</code></td><td>Init / recovery, issues fingerprint</td></tr>
+<tr><td><span class="m get">GET</span></td><td><code>/game/{sessionKey}/getState</code></td><td>Short session info (gameId, externalSessionId)</td></tr>
+<tr><td rowspan="8"><b>Gameplay</b></td><td><span class="m post">POST</span></td><td><code>/game/{sessionKey}/spin</code></td><td>Main spin <code>{bet, lines}</code></td></tr>
+<tr><td><span class="m post">POST</span></td><td><code>/game/{sessionKey}/freespin</code></td><td>Freespin step</td></tr>
+<tr><td><span class="m post">POST</span></td><td><code>/game/{sessionKey}/buy</code></td><td>Buy bonus, price = totalBet × bonusCoefficient%</td></tr>
+<tr><td><span class="m post">POST</span></td><td><code>/game/{sessionKey}/respin</code></td><td>Respin step</td></tr>
+<tr><td><span class="m post">POST</span></td><td><code>/game/{sessionKey}/avalanche</code></td><td>Cascading reels step</td></tr>
+<tr><td><span class="m post">POST</span></td><td><code>/game/{sessionKey}/bonus</code></td><td>Start bonus with chosen variant</td></tr>
+<tr><td><span class="m post">POST</span></td><td><code>/game/{sessionKey}/getPreviousState</code></td><td>Exit bonus, return to base</td></tr>
+<tr><td><span class="m post">POST</span></td><td><code>/game/{sessionKey}/jackpot</code> · <code>/open-field-item</code></td><td>Jackpot step / open field cell</td></tr>
+<tr><td rowspan="2"><b>Engagement</b></td><td><span class="m get">GET</span></td><td><code>/game/{sessionKey}/tournaments</code></td><td>Tournaments + leaderboards</td></tr>
+<tr><td><span class="m post">POST</span></td><td><code>/socials/{sessionKey}/nickname</code></td><td>Set nickname (1–255 chars)</td></tr>
+<tr><td rowspan="3"><b>Lobby</b></td><td><span class="m post">POST</span></td><td><code>/game/{sessionKey}/lobby</code></td><td>Get lobbyKey + url</td></tr>
+<tr><td><span class="m get">GET</span></td><td><code>/lobby/{lobbyKey}</code></td><td>Available games</td></tr>
+<tr><td><span class="m post">POST</span></td><td><code>/lobby/{lobbyKey}/game/{gameSysname}</code></td><td>Launch game → new sessionKey</td></tr>
+<tr><td rowspan="3"><b>Telemetry &amp; media</b></td><td><span class="m post">POST</span></td><td><code>/game/{sessionKey}/stat/{action}</code></td><td>Lifecycle event (<code>loaded</code>), empty 200</td></tr>
+<tr><td><span class="m post">POST</span></td><td><code>/game/{sessionKey}/screenshot</code></td><td>Upload win screenshot (multipart, ≤10 MB, always 200)</td></tr>
+<tr><td><span class="m get">GET</span></td><td><code>/game/{sessionKey}/screenshot</code></td><td>302 to temp download link</td></tr>
+</table></div>
+
+<!-- ============ RESPONSE MODEL ============ -->
+<h2 id="state">5. Response model</h2>
+<p>One <b>GameState</b> shape is reused everywhere. Init nests it under <code>lastSpin</code> next to the static config; actions return it at the root plus four wrapper fields.</p>
+<div class="grid">
+<div class="card"><h4>Init response <span class="tag">GET /game/{key}</span></h4>
+<pre class="shape"><span class="k">session</span>   user, fingerprint, sessionKey, mode
+<span class="k">config</span>    slot{params: lines, symbols, bigwin…}
+          bets[], bonusCoefficient, lines
+          jackpotParameters?, bonusParameters?
+          server?  <span class="c">// realtime service</span>
+<span class="k">i18n</span>      locale, translationsUrl, fallback…
+<span class="k">money</span>     balance, currency, currencyData
+<span class="k">operator</span>  operatorData, clientSettings, homeUrl
+          externalFreespins?, socials
+<span class="k">lastSpin</span>  <b>GameState</b>  <span class="c">// restore screen</span>
+<span class="k">promo</span>     tournaments[], *Popup
+<span class="k">errors?</span>   errorCode/Level/Message <span class="c">// replaces promo</span></pre></div>
+<div class="card"><h4>Action response <span class="tag">POST /spin …</span></h4>
+<pre class="shape"><b>GameState</b>
+  reels[], bet, lines, totalBet, totalWin
+  winLines[], mode, currentStep, nextStep
+  extra   <span class="c">// [] outside freespin/bonus</span>
+  multiplier, collectedSymbol, collection
+  jackpot?, wheelOfFortune?, jackpotState?
+  typeMath?
+<span class="k">+ wrapper</span>
+  balance
+  externalFreespins?
+  tournamentStartPopup?
+  tournamentWinnerPopup?</pre></div>
+</div>
+
+<!-- ============ VARIANTS ============ -->
+<h2 id="variants">6. Game-specific state variants</h2>
+<p>GameState is <b>not</b> a single schema. These games replace or drop standard fields — the client needs a per-game adapter, keyed by <code>slot.systemName</code>.</p>
+<div class="tbl"><table>
+<tr><th>Game</th><th>Deviation from standard state</th></tr>
+<tr><td><b>Space Infinity</b></td><td><code>winLines</code> becomes <code>{lines, reels}</code>; <code>extra</code> adds bonus-ladder steps</td></tr>
+<tr><td><b>Fruit Storm</b></td><td><code>extra</code> fully replaced: per-bet spin counters, <code>maxSpinsCount</code>, <code>lastReels</code></td></tr>
+<tr><td><b>Shootland</b></td><td>Pays by ways: no <code>winLines</code>/<code>lines</code>, adds <code>winWays</code>; <code>extra</code> has wilds/stars/isMaxWin</td></tr>
+<tr><td><b>Dark Portal</b></td><td>Adds <code>currentMode</code>, <code>openedModes</code>, <code>modeCanBeChanged</code>; counters keyed by mode → totalBet</td></tr>
+<tr><td><b>TapTap</b></td><td><code>extra.hash</code> must be echoed in <code>/freespin</code>; <code>possibleWins</code></td></tr>
+<tr><td><b>Pinball Inferno</b></td><td><code>totalWin</code> reported by game, adds <code>pinballPath</code>, <code>debugData</code></td></tr>
+<tr><td><b>Mystic Gates / Charmana</b></td><td>No <code>reels</code>/<code>winLines</code>; multi-bet state keyed by totalBet (<code>reelsByBet</code>, <code>cashoutByBet</code>, <code>wins</code> with numeric codes)</td></tr>
+</table></div>
+
+<!-- ============ LOBBY / HANDOFF ============ -->
+<h2 id="lobby">7. Lobby &amp; session handoff</h2>
+<div class="card diagram">
+<svg viewBox="0 0 900 200" role="img" aria-label="Lobby and session handoff flows">
+  <defs><marker id="l" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0L10,5L0,10z"/></marker></defs>
+  <text x="10" y="22" font-weight="600">In-game lobby</text>
+  <rect class="box" x="10" y="35" width="190" height="50" rx="8"/><text x="105" y="57" text-anchor="middle" class="mono">POST /game/{k}/lobby</text><text x="105" y="74" text-anchor="middle" class="sub">→ lobbyKey, url</text>
+  <path class="edge" d="M200,60 L240,60" marker-end="url(#l)"/>
+  <rect class="box" x="242" y="35" width="190" height="50" rx="8"/><text x="337" y="57" text-anchor="middle" class="mono">GET /lobby/{lobbyKey}</text><text x="337" y="74" text-anchor="middle" class="sub">→ slots[], usePostMessage</text>
+  <path class="edge" d="M432,60 L472,60" marker-end="url(#l)"/>
+  <rect class="box" x="474" y="35" width="250" height="50" rx="8"/><text x="599" y="57" text-anchor="middle" class="mono">POST /lobby/{lobbyKey}/game/{sys}</text><text x="599" y="74" text-anchor="middle" class="sub">→ new sessionKey, url</text>
+  <path class="edge" d="M724,60 L764,60" marker-end="url(#l)"/>
+  <rect class="box core" x="766" y="35" width="124" height="50" rx="8"/><text x="828" y="65" text-anchor="middle" font-weight="600">Game init</text>
+
+  <text x="10" y="127" font-weight="600">Operator freespins end</text>
+  <rect class="box" x="10" y="140" width="300" height="50" rx="8"/><text x="160" y="162" text-anchor="middle" class="sub">action response:</text><text x="160" y="179" text-anchor="middle" class="mono">externalFreespins.isLast = true</text>
+  <path class="edge" d="M310,165 L350,165" marker-end="url(#l)"/>
+  <rect class="box" x="352" y="140" width="300" height="50" rx="8"/><text x="502" y="162" text-anchor="middle" class="sub">nextSessionKey ≠ null → current session closed</text><text x="502" y="179" text-anchor="middle" class="mono">externalFreespins.nextSessionKey</text>
+  <path class="edge" d="M652,165 L764,165" marker-end="url(#l)"/>
+  <rect class="box core" x="766" y="140" width="124" height="50" rx="8"/><text x="828" y="162" text-anchor="middle" font-weight="600">Game init</text><text x="828" y="179" text-anchor="middle" class="sub">with new key</text>
+</svg>
+</div>
+
+<!-- ============ ERRORS ============ -->
+<h2 id="errors">8. Error model</h2>
+<p>Errors arrive through five different channels — the client must branch on HTTP status <i>and</i> payload shape.</p>
+<div class="grid">
+  <div class="card"><h4>200 + error fields</h4><p>Game init only. <code>errorCode/Level/Message</code> merged into payload; tournament fields omitted. E.g. 109, 111, 300.</p></div>
+  <div class="card"><h4>422 business error</h4><p><code>{errorCode, errorLevel, errorMessage}</code> on rejected actions. Message is localized.</p></div>
+  <div class="card"><h4>400 validation</h4><p>Array of <code>{code, message, field}</code>. Empty body = <code>{}</code>, so it fails here.</p></div>
+  <div class="card"><h4>422 parse error</h4><p><code>{error: "Syntax error"}</code> when the body is not valid JSON.</p></div>
+  <div class="card"><h4>404</h4><p>Unknown session key / lobby key / sysname. Screenshot GET when none exists.</p></div>
+  <div class="card"><h4>Never fails</h4><p>Screenshot POST is always 200 <code>{saved, roundId}</code>; <code>/stat</code> is always empty 200.</p></div>
+</div>
+<h3>Levels</h3>
+<p><span class="lvl CRITICAL">CRITICAL</span> session cannot continue · <span class="lvl ALERT">ALERT</span> player can fix and retry · <span class="lvl WARNING">WARNING</span> informational</p>
+<div class="tbl"><table>
+<tr><th>Code</th><th>Level</th><th>Message</th><th>Meaning</th></tr>
+<tr><td>1</td><td><span class="lvl CRITICAL">CRITICAL</span></td><td>General error</td><td>Unexpected failure</td></tr>
+<tr><td>3</td><td><span class="lvl ALERT">ALERT</span></td><td>Not enough money</td><td>Balance lower than bet</td></tr>
+<tr><td>4</td><td><span class="lvl CRITICAL">CRITICAL</span></td><td>Bet limit reached.</td><td>Bet exceeds configured limit</td></tr>
+<tr><td>9</td><td><span class="lvl CRITICAL">CRITICAL</span></td><td>Your currency is not supported</td><td>No currency config</td></tr>
+<tr><td>100–105</td><td><span class="lvl CRITICAL">CRITICAL</span></td><td>… is not available</td><td>Wrong step: avalanche / bonus / buy / freespin / jackpot / respin</td></tr>
+<tr><td>106</td><td><span class="lvl CRITICAL">CRITICAL</span></td><td>Wrong bet</td><td>Bet not in <code>bets</code></td></tr>
+<tr><td>107</td><td><span class="lvl CRITICAL">CRITICAL</span></td><td>Spin is not available</td><td>E.g. during freespins</td></tr>
+<tr><td>108</td><td><span class="lvl CRITICAL">CRITICAL</span></td><td>Wrong lines</td><td>Lines value not allowed</td></tr>
+<tr><td>109</td><td><span class="lvl CRITICAL">CRITICAL</span></td><td>Session is closed</td><td>Expired or closed</td></tr>
+<tr><td>110</td><td><span class="lvl CRITICAL">CRITICAL</span></td><td>Previous state is not available</td><td>No bonus to return from</td></tr>
+<tr><td>111</td><td><span class="lvl CRITICAL">CRITICAL</span></td><td>Slot is not available in your country</td><td>Geo restriction (init, 200)</td></tr>
+<tr><td>112</td><td><span class="lvl ALERT">ALERT</span></td><td>Game already opened in other device</td><td>Fingerprint mismatch</td></tr>
+<tr><td>115</td><td><span class="lvl CRITICAL">CRITICAL</span></td><td>Wrong current mode</td><td>Mode mismatch</td></tr>
+<tr><td>140</td><td><span class="lvl ALERT">ALERT</span> / <span class="lvl CRITICAL">CRITICAL</span></td><td>Nickname is too long. / error.140</td><td>&gt;255 chars / empty</td></tr>
+<tr><td>300</td><td><span class="lvl WARNING">WARNING</span></td><td>This language is not supported</td><td>Falls back to English (init, 200)</td></tr>
+</table></div>
+
+<!-- ============ GOTCHAS ============ -->
+<h2 id="gotchas">9. Client implementation gotchas</h2>
+<div class="card"><ul class="gotchas">
+  <li><b>Money is strings.</b> Amounts, wins, bets are numeric strings — parse with a decimal-safe type. <code>bets[]</code> items may be number <i>or</i> string.</li>
+  <li><b><code>extra</code> is <code>[]</code></b> (empty array, not object) outside freespin/bonus modes. Guard before reading keys.</li>
+  <li><b>Init once.</b> Re-calling init rotates the fingerprint and can lock out your own tab.</li>
+  <li><b>Popups are one-shot.</b> <code>tournamentStartPopup</code> / <code>tournamentWinnerPopup</code> are delivered once, then null — show them immediately.</li>
+  <li><b><code>lines</code> must be a JSON integer</b> in <code>/spin</code>; <code>bet</code> accepts string or number. <code>/buy</code> rejects <code>lines</code>; <code>/freespin</code> ignores bet.</li>
+  <li><b><code>userData.place</code></b> can be the string <code>"-"</code> instead of an integer.</li>
+  <li><b><code>socials</code> has two shapes:</b> <code>{nickname}</code> or <code>{needToRequestNickname}</code>.</li>
+  <li><b>Index bases differ:</b> reels/rows/cols are 1-based, <code>reelIndex</code>/<code>symbolIndex</code>/<code>reelsWithSpecials</code> are 0-based.</li>
+  <li><b>Per-game adapters</b> are required for the 7 variant games — don't type GameState as one interface.</li>
+  <li><b>Screenshot</b> attaches only to the last winning round, within 30 minutes.</li>
+</ul></div>
+
+<footer>Generated from <code>Game Front API.md</code> · 2026-11-20</footer>
+</main>
+</body>
+</html>

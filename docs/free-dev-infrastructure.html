@@ -1,0 +1,462 @@
+<title>Free Dev Infrastructure</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: single reading column, matching the sibling architecture pages (index, frontend, gateway) */
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#1b1d21; --ink-2:#555b66; --line:#d9dbe0;
+  --accent:#2f5bd3; --accent-soft:#e6edfc; --ok:#1f8a4c; --ok-soft:#e3f4ea;
+  --warn:#a86300; --warn-soft:#fbf0dc; --bad:#c2352b; --bad-soft:#fbe5e3;
+  --violet:#7a4cc2; --violet-soft:#efe8fa; --code-bg:#f1f2f5;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121417; --surface:#1b1e23; --ink:#e8eaed; --ink-2:#a2a8b3; --line:#30353d;
+    --accent:#7aa2ff; --accent-soft:#1f2a44; --ok:#5cc98a; --ok-soft:#173022;
+    --warn:#e6a64a; --warn-soft:#352812; --bad:#ff7b70; --bad-soft:#3a1a18;
+    --violet:#b893f5; --violet-soft:#2a2140; --code-bg:#16191d; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121417; --surface:#1b1e23; --ink:#e8eaed; --ink-2:#a2a8b3; --line:#30353d;
+  --accent:#7aa2ff; --accent-soft:#1f2a44; --ok:#5cc98a; --ok-soft:#173022;
+  --warn:#e6a64a; --warn-soft:#352812; --bad:#ff7b70; --bad-soft:#3a1a18;
+  --violet:#b893f5; --violet-soft:#2a2140; --code-bg:#16191d; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+main{max-width:1080px;margin:0 auto;padding-block:32px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:28px;margin:0 0 4px;text-wrap:balance}
+h2{font-size:20px;margin:48px 0 6px;padding-top:8px;border-top:1px solid var(--line);text-wrap:balance}
+h3{font-size:15px;margin:20px 0 6px}
+p.lead{color:var(--ink-2);margin:0 0 20px;max-width:780px}
+p{max-width:820px}
+a{color:var(--accent)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+code{font-family:var(--mono);font-size:.86em;background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 8px}
+nav a{font-size:13px;text-decoration:none;border:1px solid var(--line);background:var(--surface);padding:4px 10px;border-radius:999px}
+nav a:hover{border-color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
+.card h4{margin:0 0 6px;font-size:14px}
+.card p,.card ul{margin:0;font-size:14px;color:var(--ink-2)}
+.card ul{padding-left:18px}
+.card li{margin:4px 0}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.grid .card{margin:0;min-width:0}
+.verdict{border-left:4px solid var(--accent)}
+.caution{border-left:4px solid var(--warn);background:var(--warn-soft)}
+.caution p,.caution ul{color:var(--ink)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2)}
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;margin:12px 0}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.pill.free{background:var(--ok-soft);color:var(--ok)}
+.pill.paid{background:var(--warn-soft);color:var(--warn)}
+.pill.vm{background:var(--violet-soft);color:var(--violet)}
+.pill.cf{background:var(--accent-soft);color:var(--accent)}
+/* steps: a real sequence, so numbered */
+ol.steps{list-style:none;counter-reset:s;padding:0;margin:16px 0;display:grid;gap:14px}
+ol.steps>li{counter-increment:s;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 16px 16px 56px;position:relative;min-width:0}
+ol.steps>li::before{content:counter(s);position:absolute;left:16px;top:14px;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--surface);font-weight:700;font-size:13px;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+ol.steps h3{margin:2px 0 8px}
+ol.steps ul{margin:6px 0;padding-left:18px}
+ol.steps li li{margin:4px 0}
+.code{position:relative;margin:10px 0;min-width:0}
+.code pre{margin:0;background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font:12.5px/1.6 var(--mono);color:var(--ink)}
+.code .file{font:600 11px var(--mono);color:var(--ink-2);letter-spacing:.03em;margin-bottom:4px}
+.code button{position:absolute;right:8px;bottom:8px;font:600 11px -apple-system,BlinkMacSystemFont,sans-serif;background:var(--surface);color:var(--ink-2);border:1px solid var(--line);border-radius:6px;padding:3px 8px;cursor:pointer}
+.code button:hover{color:var(--accent);border-color:var(--accent)}
+.c{color:var(--ink-2)}
+.diagram{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;margin:12px 0}
+.diagram svg{display:block;width:100%;min-width:680px;height:auto}
+svg text{fill:var(--ink);font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+svg .sub{fill:var(--ink-2);font-size:11.5px}
+svg .lbl{fill:var(--ink-2);font-size:11px;font-weight:600;letter-spacing:.05em}
+svg .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+svg .box.cf{fill:var(--accent-soft);stroke:var(--accent)}
+svg .box.vm{fill:var(--violet-soft);stroke:var(--violet)}
+svg .box.saas{fill:var(--ok-soft);stroke:var(--ok)}
+svg .box.ext{stroke-dasharray:5 4}
+svg .frame{fill:none;stroke:var(--violet);stroke-width:1.3;stroke-dasharray:6 5}
+svg .edge{stroke:var(--ink-2);stroke-width:1.5;fill:none}
+svg .edge.dash{stroke-dasharray:5 4}
+svg .head{fill:var(--ink-2)}
+.check{list-style:none;padding:0;margin:8px 0}
+.check li{padding-left:24px;position:relative;margin:6px 0}
+.check li::before{content:"";position:absolute;left:2px;top:5px;width:12px;height:12px;border:1.5px solid var(--ink-2);border-radius:3px}
+footer{margin-top:48px;color:var(--ink-2);font-size:13px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<main>
+<h1>Free Dev Infrastructure</h1>
+<p class="lead">How to run the whole Game Front stack (lobby, game clients, Game Gateway, Redis, Postgres, monitoring and CI) for testing at $0, so staging and prod later reuse the same images and config on paid servers. Companion to the <a href="index.html">API architecture</a>, <a href="frontend-architecture.html">frontend</a> and <a href="multi-provider-gateway.html">multi-provider gateway</a> pages.</p>
+
+<nav>
+  <a href="#summary">Summary</a>
+  <a href="#inventory">What to host</a>
+  <a href="#topology">Topology</a>
+  <a href="#steps">Setup steps</a>
+  <a href="#limits">Free tier limits</a>
+  <a href="#fallback">Fallback</a>
+  <a href="#promote">Staging &amp; prod</a>
+  <a href="#argocd">Argo CD</a>
+  <a href="#checklist">Checklist</a>
+</nav>
+
+<h2 id="summary">Recommendation in one view</h2>
+<div class="grid">
+  <div class="card verdict">
+    <h4>One free VM + Cloudflare</h4>
+    <p>An Oracle Cloud Always Free ARM server (4 OCPU, 24 GB) runs the gateway, Redis and Postgres with Docker Compose. Cloudflare serves the lobby, the game clients and the game files.</p>
+  </div>
+  <div class="card verdict">
+    <h4>Same artifacts everywhere</h4>
+    <p>Dev, staging and prod run the same container images and the same compose file. Only the server size and env vars change, so promoting is adding servers, not rewriting.</p>
+  </div>
+  <div class="card caution">
+    <h4>Test play only</h4>
+    <p>Use demo sessions against the dev Game API. Free tiers have no SLA, and money must never move through them. Check each limit when you sign up; free tiers change often.</p>
+  </div>
+</div>
+
+<h2 id="inventory">What dev needs to host</h2>
+<p>Taken from the three architecture pages. Every part has a free home.</p>
+<div class="tbl">
+<table>
+  <thead><tr><th>Part</th><th>What it is</th><th>Free host</th></tr></thead>
+  <tbody>
+    <tr><td>Lobby app</td><td>Static Vite + React site, one build served on many hostnames</td><td><span class="pill cf">Cloudflare Pages</span></td></tr>
+    <tr><td>Game clients</td><td>Static Vite + PixiJS sites at <code>games.&lt;domain&gt;/&lt;clientId&gt;</code></td><td><span class="pill cf">Cloudflare Pages</span></td></tr>
+    <tr><td>Game files</td><td>Sprite sheets, Spine animations, audio, translations, lobby themes</td><td><span class="pill cf">Cloudflare R2</span> 10 GB</td></tr>
+    <tr><td>Game Gateway</td><td>Bun + Hono container, canonical <code>/v1</code> API and connectors</td><td><span class="pill vm">Oracle VM</span></td></tr>
+    <tr><td>Redis</td><td>Token → session map, <code>requestId</code> duplicate check</td><td><span class="pill vm">Same VM</span></td></tr>
+    <tr><td>Postgres</td><td>Lobby profiles, append-only round log</td><td><span class="pill vm">Same VM</span></td></tr>
+    <tr><td>Monitoring</td><td>OpenTelemetry traces per provider; frontend error tracking</td><td><span class="pill free">Grafana Cloud</span> <span class="pill free">Sentry</span></td></tr>
+    <tr><td>CI/CD</td><td>Build, test, push images, deploy</td><td><span class="pill free">GitHub Actions</span> <span class="pill free">GHCR</span></td></tr>
+    <tr><td>Provider A</td><td>The existing Game API</td><td>Your dev Game API in demo mode. Demo sessions never expire and use no money.</td></tr>
+    <tr><td>Domain</td><td>Hostnames for lobbies, games, API and files</td><td><span class="pill paid">~$10 / year</span> or <code>*.pages.dev</code> with <code>?lobby=</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="topology">Dev topology</h2>
+<div class="diagram" role="img" aria-label="Diagram: browsers load the lobby and game clients from Cloudflare Pages and files from R2, then call the Oracle VM where Caddy forwards to the gateway, which uses Redis and Postgres and calls the dev Game API. The gateway sends traces to Grafana Cloud; clients send errors to Sentry. GitHub Actions deploys to both.">
+<svg viewBox="0 0 900 400" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker></defs>
+
+  <rect class="box" x="20" y="160" width="130" height="64" rx="8"/>
+  <text x="85" y="187" text-anchor="middle" font-weight="600">Browser</text>
+  <text x="85" y="206" text-anchor="middle" class="sub">tester / QA</text>
+
+  <text x="200" y="30" class="lbl">CLOUDFLARE · FREE</text>
+  <rect class="box cf" x="200" y="42" width="200" height="56" rx="8"/>
+  <text x="300" y="66" text-anchor="middle" font-weight="600">Pages · lobby</text>
+  <text x="300" y="84" text-anchor="middle" class="sub">lobby-a-dev, lobby-b-dev …</text>
+  <rect class="box cf" x="200" y="110" width="200" height="56" rx="8"/>
+  <text x="300" y="134" text-anchor="middle" font-weight="600">Pages · games</text>
+  <text x="300" y="152" text-anchor="middle" class="sub">games-dev/&lt;clientId&gt;</text>
+  <rect class="box cf" x="200" y="178" width="200" height="56" rx="8"/>
+  <text x="300" y="202" text-anchor="middle" font-weight="600">R2 · game files</text>
+  <text x="300" y="220" text-anchor="middle" class="sub">cdn-dev · atlases, audio, i18n</text>
+
+  <text x="470" y="30" class="lbl">ORACLE ALWAYS FREE VM · DOCKER COMPOSE</text>
+  <rect class="frame" x="460" y="40" width="250" height="250" rx="10"/>
+  <rect class="box vm" x="480" y="58" width="210" height="44" rx="8"/>
+  <text x="585" y="85" text-anchor="middle" font-weight="600">Caddy · TLS :443</text>
+  <rect class="box vm" x="480" y="124" width="210" height="56" rx="8"/>
+  <text x="585" y="148" text-anchor="middle" font-weight="600">Game Gateway</text>
+  <text x="585" y="166" text-anchor="middle" class="sub">Bun + Hono · api-dev</text>
+  <rect class="box vm" x="480" y="210" width="98" height="56" rx="8"/>
+  <text x="529" y="236" text-anchor="middle" font-weight="600">Redis</text>
+  <text x="529" y="253" text-anchor="middle" class="sub">sessions</text>
+  <rect class="box vm" x="592" y="210" width="98" height="56" rx="8"/>
+  <text x="641" y="236" text-anchor="middle" font-weight="600">Postgres</text>
+  <text x="641" y="253" text-anchor="middle" class="sub">profiles, log</text>
+
+  <rect class="box ext" x="750" y="124" width="130" height="56" rx="8"/>
+  <text x="815" y="148" text-anchor="middle" font-weight="600">Game API</text>
+  <text x="815" y="166" text-anchor="middle" class="sub">Provider A · demo</text>
+
+  <rect class="box saas" x="750" y="210" width="130" height="56" rx="8"/>
+  <text x="815" y="236" text-anchor="middle" font-weight="600">Grafana Cloud</text>
+  <text x="815" y="253" text-anchor="middle" class="sub">OTLP traces</text>
+
+  <rect class="box saas" x="200" y="300" width="200" height="50" rx="8"/>
+  <text x="300" y="322" text-anchor="middle" font-weight="600">Sentry</text>
+  <text x="300" y="339" text-anchor="middle" class="sub">frontend errors</text>
+
+  <rect class="box saas" x="460" y="320" width="250" height="50" rx="8"/>
+  <text x="585" y="342" text-anchor="middle" font-weight="600">GitHub Actions + GHCR</text>
+  <text x="585" y="359" text-anchor="middle" class="sub">build arm64 image → ssh deploy</text>
+
+  <path class="edge" d="M150 180 L198 72" marker-end="url(#ah)"/>
+  <path class="edge" d="M150 190 L198 138" marker-end="url(#ah)"/>
+  <path class="edge" d="M150 200 L198 206" marker-end="url(#ah)"/>
+  <path class="edge" d="M150 214 C 300 270, 400 110, 478 82" marker-end="url(#ah)"/>
+  <path class="edge" d="M585 102 L585 122" marker-end="url(#ah)"/>
+  <path class="edge" d="M560 180 L540 208" marker-end="url(#ah)"/>
+  <path class="edge" d="M610 180 L630 208" marker-end="url(#ah)"/>
+  <path class="edge" d="M690 152 L748 152" marker-end="url(#ah)"/>
+  <path class="edge dash" d="M690 170 L748 228" marker-end="url(#ah)"/>
+  <path class="edge dash" d="M150 222 L240 298" marker-end="url(#ah)"/>
+  <path class="edge dash" d="M585 318 L585 292" marker-end="url(#ah)"/>
+</svg>
+</div>
+<p class="c" style="font-size:13px">Dashed lines are monitoring and deploy traffic. Only Caddy has public ports; Redis and Postgres stay on the internal Docker network.</p>
+
+<h2 id="steps">Setup steps</h2>
+<ol class="steps">
+  <li>
+    <h3>Create the accounts</h3>
+    <ul>
+      <li>Oracle Cloud: asks for a card to verify you, but doesn't charge.</li>
+      <li>Cloudflare, GitHub, Grafana Cloud, Sentry.</li>
+      <li>A domain (about $10 a year, the only real cost). Without one, use <code>*.pages.dev</code> addresses and the <code>?lobby=</code> setting in place of separate lobby hostnames.</li>
+    </ul>
+  </li>
+
+  <li>
+    <h3>Create the server on Oracle Always Free</h3>
+    <ul>
+      <li>Choose the home region close to the providers (for example Frankfurt). The gateway page says to deploy near the providers, and you can't change the home region later.</li>
+      <li>Create an instance: shape <code>VM.Standard.A1.Flex</code>, 4 OCPU, 24 GB RAM, Ubuntu 24.04 (ARM), with your SSH key.</li>
+      <li>In the VCN security list, allow incoming TCP 22, 80 and 443.</li>
+      <li>Oracle's Ubuntu image also blocks those ports in its own firewall. Open them on the server and install Docker:</li>
+    </ul>
+    <div class="code"><pre>sudo iptables -I INPUT 6 -p tcp -m multiport --dports 80,443 -j ACCEPT
+sudo netfilter-persistent save
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER   <span class="c"># log out and back in</span></pre><button type="button">Copy</button></div>
+    <p><strong>Tip:</strong> upgrading the account to Pay-As-You-Go keeps the free resources at $0, stops Oracle reclaiming an idle free server, and makes "out of capacity" errors much rarer. Set a $1 budget alert to be safe.</p>
+  </li>
+
+  <li>
+    <h3>Point DNS at the server</h3>
+    <p>In Cloudflare DNS, add an A record <code>api-dev.&lt;domain&gt;</code> → the server's public IP with the proxy turned off (grey cloud). Caddy then gets its TLS certificate by itself.</p>
+  </li>
+
+  <li>
+    <h3>Start the stack</h3>
+    <p>Create <code>/opt/dev/</code> on the server with these three files, then run <code>docker compose up -d</code>.</p>
+    <div class="code"><div class="file">/opt/dev/docker-compose.yml</div><pre>services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes: [./Caddyfile:/etc/caddy/Caddyfile, caddy:/data]
+  gateway:
+    image: ghcr.io/&lt;org&gt;/game-gateway:dev
+    restart: unless-stopped
+    env_file: .env
+    depends_on: [redis, postgres]
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes: [redis:/data]
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    env_file: .env
+    volumes: [pg:/var/lib/postgresql/data]
+volumes: { caddy: {}, redis: {}, pg: {} }</pre><button type="button">Copy</button></div>
+    <div class="code"><div class="file">/opt/dev/Caddyfile</div><pre>api-dev.&lt;domain&gt; {
+  reverse_proxy gateway:3000
+}</pre><button type="button">Copy</button></div>
+    <div class="code"><div class="file">/opt/dev/.env  (chmod 600, never in git)</div><pre>POSTGRES_USER=gateway
+POSTGRES_PASSWORD=&lt;random&gt;
+POSTGRES_DB=gateway
+DATABASE_URL=postgres://gateway:&lt;random&gt;@postgres:5432/gateway
+REDIS_URL=redis://redis:6379
+PROVIDER_A_URL=https://&lt;dev-game-api&gt;/api/v1
+OTEL_SERVICE_NAME=game-gateway-dev
+OTEL_EXPORTER_OTLP_ENDPOINT=&lt;from Grafana Cloud&gt;
+OTEL_EXPORTER_OTLP_HEADERS=Authorization=Basic &lt;token&gt;</pre><button type="button">Copy</button></div>
+  </li>
+
+  <li>
+    <h3>Deploy the frontend on Cloudflare</h3>
+    <ul>
+      <li><strong>Lobby:</strong> one Pages project for <code>apps/lobby</code>. Add <code>lobby-a-dev.&lt;domain&gt;</code>, <code>lobby-b-dev.&lt;domain&gt;</code> and so on as custom domains on that one project. This is the recommended runtime-profile model: one build, and each lobby resolves its profile from the hostname at startup.</li>
+      <li><strong>Games:</strong> one Pages project whose build output has <code>games/&lt;clientId&gt;/</code> folders, on <code>games-dev.&lt;domain&gt;</code>.</li>
+      <li><strong>Game files:</strong> an R2 bucket on <code>cdn-dev.&lt;domain&gt;</code>. Downloads from R2 are free.</li>
+      <li>Connect each Pages project to the GitHub repo; Cloudflare builds on every push and gives each branch a preview URL.</li>
+    </ul>
+  </li>
+
+  <li>
+    <h3>Set up CI for the gateway</h3>
+    <p>Build an <code>arm64</code> image (the Oracle VM is ARM), push it to GHCR, then SSH in and restart. Add <code>DEV_HOST</code> and <code>DEV_SSH_KEY</code> as repository secrets.</p>
+    <div class="code"><div class="file">.github/workflows/gateway-dev.yml</div><pre>name: gateway-dev
+on:
+  push:
+    branches: [main]
+    paths: ["apps/gateway/**", "packages/**"]
+permissions: { contents: read, packages: write }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: "${{ github.actor }}", password: "${{ secrets.GITHUB_TOKEN }}" }
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/gateway/Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/game-gateway:dev
+      - uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEV_HOST }}
+          username: ubuntu
+          key: ${{ secrets.DEV_SSH_KEY }}
+          script: cd /opt/dev &amp;&amp; docker compose pull gateway &amp;&amp; docker compose up -d</pre><button type="button">Copy</button></div>
+    <p>If the image is private, run <code>docker login ghcr.io</code> once on the server with a read-only token. A private repo gets 2,000 free CI minutes a month, which is plenty for dev.</p>
+  </li>
+
+  <li>
+    <h3>Add monitoring</h3>
+    <ul>
+      <li><strong>Gateway:</strong> the <code>OTEL_*</code> vars above send traces straight to Grafana Cloud. Tag spans with <code>provider</code>, <code>gameId</code> and <code>roundId</code>, as the gateway page asks. No collector container needed.</li>
+      <li><strong>Frontend:</strong> add the Sentry SDK to the lobby and to <code>game-core</code>, with one project per environment.</li>
+    </ul>
+  </li>
+
+  <li>
+    <h3>Keep secrets out of the repo</h3>
+    <p>Secrets live in <code>/opt/dev/.env</code> on the server and in GitHub Actions secrets. Provider keys and fingerprints stay on the gateway and never reach the browser, as the gateway design requires.</p>
+  </li>
+</ol>
+
+<h2 id="limits">Free tier limits to know</h2>
+<p>As last checked; confirm on each provider's pricing page when you sign up.</p>
+<div class="tbl">
+<table>
+  <thead><tr><th>Service</th><th>Free allowance</th><th>Watch out for</th></tr></thead>
+  <tbody>
+    <tr><td>Oracle Always Free</td><td>4 ARM OCPU, 24 GB RAM, 200 GB disk, 10 TB egress / month</td><td>ARM capacity can be scarce in busy regions; idle free servers can be reclaimed (fixed by Pay-As-You-Go)</td></tr>
+    <tr><td>Cloudflare Pages</td><td>Unlimited static bandwidth, 500 builds / month</td><td>Large monorepo builds can hit the build time limit; build in Actions and upload with <code>wrangler</code> if so</td></tr>
+    <tr><td>Cloudflare R2</td><td>10 GB storage, free egress</td><td>Request quotas per month; plenty for a test team</td></tr>
+    <tr><td>Grafana Cloud</td><td>Logs, traces and metrics with 14-day retention</td><td>Metric series cap; keep label cardinality low (no <code>sessionKey</code> labels)</td></tr>
+    <tr><td>Sentry</td><td>Developer plan, one user, monthly error quota</td><td>Quota runs out fast if a loop spams errors; sample in dev</td></tr>
+    <tr><td>GitHub Actions</td><td>Free for public repos; 2,000 min / month private</td><td>QEMU arm64 builds are slow; cache layers with <code>cache-from: type=gha</code></td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="fallback">If Oracle doesn't work out</h2>
+<div class="card">
+  <p>If signup fails or no ARM capacity is available, run the gateway on <strong>Render's free tier</strong> (it sleeps after 15 minutes idle, so the first request after a pause is slow), with <strong>Upstash Redis</strong> free and <strong>Neon Postgres</strong> free. Cloudflare, Grafana Cloud, Sentry and CI stay the same; only <code>REDIS_URL</code> and <code>DATABASE_URL</code> change.</p>
+</div>
+
+<h2 id="promote">Moving to staging and prod</h2>
+<p>Everything is set by env vars, so promotion means adding servers, not changing code.</p>
+<div class="tbl">
+<table>
+  <thead><tr><th>Concern</th><th>Dev <span class="pill free">free</span></th><th>Staging / Prod <span class="pill paid">paid</span></th></tr></thead>
+  <tbody>
+    <tr><td>Gateway</td><td>1 Oracle VM, Docker Compose</td><td>2 or more instances behind a load balancer, or Kubernetes, in the providers' region</td></tr>
+    <tr><td>Redis</td><td>Container with AOF</td><td>Managed Redis with high availability (the gateway page lists Redis as a single point of failure)</td></tr>
+    <tr><td>Postgres</td><td>Container on the VM disk</td><td>Managed Postgres with backups and point-in-time restore</td></tr>
+    <tr><td>Edge</td><td>Caddy, Cloudflare DNS only</td><td>Cloud load balancer + Cloudflare proxy and WAF</td></tr>
+    <tr><td>Frontend</td><td>Cloudflare Pages + R2</td><td>Same, with separate projects or branches per environment</td></tr>
+    <tr><td>Monitoring</td><td>Free tiers</td><td>Paid tiers with longer retention and alerting</td></tr>
+    <tr><td>Images</td><td><code>game-gateway:dev</code></td><td>Promote the same image by tag (<code>:sha</code> → <code>:staging</code> → <code>:prod</code>); never rebuild per environment</td></tr>
+    <tr><td>Deploys</td><td>GitHub Actions → SSH → <code>docker compose up</code></td><td>Argo CD syncs Kubernetes manifests from Git (see below)</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2 id="argocd">Future: deploys with Argo CD</h2>
+<p>Once staging and prod run on Kubernetes, deploys move to Argo CD. Argo CD is open source (Apache 2.0, CNCF graduated) and free to run; you pay only for the cluster it runs on. It only deploys to Kubernetes, so it replaces the Compose and SSH step, not the image build.</p>
+<div class="grid">
+  <div class="card verdict">
+    <h4>How deploys change</h4>
+    <ul>
+      <li>CI still builds and pushes the image to GHCR.</li>
+      <li>CI then updates the image tag in a deploy repo (or folder) instead of SSH-ing to a server.</li>
+      <li>Argo CD sees the Git change and syncs the cluster to match.</li>
+      <li>Rollback is a Git revert.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>One repo, one folder per environment</h4>
+    <ul>
+      <li><code>deploy/base/</code>: gateway Deployment, Service, Ingress (Kustomize or Helm)</li>
+      <li><code>deploy/envs/dev/</code>, <code>staging/</code>, <code>prod/</code>: tag, replicas, env vars</li>
+      <li>One Argo CD Application per environment</li>
+      <li>Dev and staging auto-sync; prod syncs on manual approval</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Trying it in dev for free</h4>
+    <ul>
+      <li>Install k3s on the same Oracle VM, then Argo CD on it (about 1–2 GB RAM).</li>
+      <li>Do this only when the move to Kubernetes is decided; until then Compose is simpler.</li>
+      <li>Redis and Postgres stay outside Argo CD in staging and prod as managed services.</li>
+    </ul>
+  </div>
+</div>
+<div class="code"><div class="file">Install on the dev VM (when ready)</div><pre>curl -sfL https://get.k3s.io | sh -
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml</pre><button type="button">Copy</button></div>
+<div class="code"><div class="file">deploy/argocd/gateway-staging.yaml</div><pre>apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: game-gateway-staging
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/&lt;org&gt;/&lt;repo&gt;.git
+    targetRevision: main
+    path: deploy/envs/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: game-gateway
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }   <span class="c"># omit for prod: sync by hand</span>
+    syncOptions: [CreateNamespace=true]</pre><button type="button">Copy</button></div>
+
+<h2 id="checklist">Done when</h2>
+<div class="card">
+  <ul class="check">
+    <li><code>https://api-dev.&lt;domain&gt;</code> answers with a valid certificate</li>
+    <li>A lobby hostname loads and shows the catalog for its profile</li>
+    <li>Launching a game opens the client from <code>games-dev</code> in an iframe</li>
+    <li>A demo spin goes browser → gateway → dev Game API and back</li>
+    <li>Retrying a spin with the same <code>requestId</code> returns the stored result without a second bet</li>
+    <li>The spin shows up as a trace in Grafana Cloud</li>
+    <li>A push to <code>main</code> redeploys the gateway without manual steps</li>
+    <li>No secret appears in the repo or in the browser bundle</li>
+  </ul>
+</div>
+
+<footer>Proposal · 2026-11-23 · <a href="index.html">API architecture</a> · <a href="frontend-architecture.html">Frontend</a> · <a href="multi-provider-gateway.html">Multi-provider gateway</a></footer>
+</main>
+
+<script>
+document.querySelectorAll('.code button').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var pre = btn.parentElement.querySelector('pre');
+    var text = pre.innerText;
+    var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1500); };
+    var fallback = function () {
+      var r = document.createRange(); r.selectNodeContents(pre);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      btn.textContent = 'Press ⌘C';
+    };
+    try {
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } catch (e) { fallback(); }
+  });
+});
+</script>

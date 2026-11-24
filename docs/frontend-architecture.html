@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game Frontend Architecture</title>
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#1b1d21; --ink-2:#555b66; --line:#d9dbe0;
+  --accent:#2f5bd3; --accent-soft:#e6edfc; --ok:#1f8a4c; --ok-soft:#e3f4ea;
+  --warn:#a86300; --warn-soft:#fbf0dc; --bad:#c2352b; --bad-soft:#fbe5e3;
+  --violet:#7a4cc2; --violet-soft:#efe8fa;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121417; --surface:#1b1e23; --ink:#e8eaed; --ink-2:#a2a8b3; --line:#30353d;
+    --accent:#7aa2ff; --accent-soft:#1f2a44; --ok:#5cc98a; --ok-soft:#173022;
+    --warn:#e6a64a; --warn-soft:#352812; --bad:#ff7b70; --bad-soft:#3a1a18;
+    --violet:#b893f5; --violet-soft:#2a2140;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121417; --surface:#1b1e23; --ink:#e8eaed; --ink-2:#a2a8b3; --line:#30353d;
+  --accent:#7aa2ff; --accent-soft:#1f2a44; --ok:#5cc98a; --ok-soft:#173022;
+  --warn:#e6a64a; --warn-soft:#352812; --bad:#ff7b70; --bad-soft:#3a1a18;
+  --violet:#b893f5; --violet-soft:#2a2140;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:28px;margin:0 0 4px}
+h2{font-size:20px;margin:48px 0 6px;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:15px;margin:20px 0 6px}
+p.lead{color:var(--ink-2);margin:0 0 20px;max-width:780px}
+p{max-width:820px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em;background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 8px}
+nav a{font-size:13px;text-decoration:none;border:1px solid var(--line);background:var(--surface);padding:4px 10px;border-radius:999px}
+nav a:hover{border-color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
+.diagram{overflow-x:auto}
+.diagram svg{display:block;width:100%;min-width:640px;height:auto}
+svg text{fill:var(--ink);font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+svg .sub{fill:var(--ink-2);font-size:11.5px}
+svg .mono{font-family:var(--mono);font-size:12px}
+svg .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+svg .box.core{fill:var(--accent-soft);stroke:var(--accent)}
+svg .box.react{fill:var(--ok-soft);stroke:var(--ok)}
+svg .box.pixi{fill:var(--violet-soft);stroke:var(--violet)}
+svg .box.ext{stroke-dasharray:5 4}
+svg .frame{fill:none;stroke:var(--ink-2);stroke-width:1.2;stroke-dasharray:6 5}
+svg .edge{stroke:var(--ink-2);stroke-width:1.5;fill:none}
+svg .edge.dash{stroke-dasharray:5 4}
+svg .head{fill:var(--ink-2)}
+svg .lbl{fill:var(--ink-2);font-size:11px;font-weight:600;letter-spacing:.05em}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.grid .card{margin:0}
+.card h4{margin:0 0 6px;font-size:14px}
+.card p,.card ul{margin:0;font-size:14px;color:var(--ink-2)}
+.card ul{padding-left:18px}
+.card li{margin:4px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2)}
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.shape{font-family:var(--mono);font-size:12.5px;line-height:1.7;white-space:pre;overflow-x:auto;margin:0}
+.shape .c{color:var(--ink-2)} .shape .k{color:var(--accent);font-weight:600}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;margin-right:4px}
+.pill.react{background:var(--ok-soft);color:var(--ok)}
+.pill.pixi{background:var(--violet-soft);color:var(--violet)}
+.pill.core{background:var(--accent-soft);color:var(--accent)}
+.verdict{border-left:4px solid var(--accent)}
+.no{border-left:4px solid var(--bad)}
+.risk td:first-child{font-weight:600}
+footer{margin-top:48px;color:var(--ink-2);font-size:13px}
+</style>
+</head>
+<body>
+<main>
+<h1>Game Frontend Architecture</h1>
+<p class="lead">Proposed client architecture for the Game Front API: a React HUD over a PixiJS canvas, a framework-free game core driven by <code>nextStep</code>, and a separate lobby app that launches games in iframes. Companion to the <a href="index.html">API architecture page</a>.</p>
+
+<nav>
+  <a href="#summary">Summary</a>
+  <a href="#runtime">Runtime layers</a>
+  <a href="#present">Present after animate</a>
+  <a href="#repo">Monorepo</a>
+  <a href="#lobby">Lobby</a>
+  <a href="#lobbies">Multiple lobbies</a>
+  <a href="#animation">Animation stack</a>
+  <a href="#stack">Full stack</a>
+  <a href="#risks">Risks</a>
+</nav>
+
+<!-- SUMMARY -->
+<h2 id="summary">1. Recommendation in one view</h2>
+<div class="grid">
+  <div class="card verdict"><h4><span class="pill react">React</span> HUD, lobby, modals</h4><p>Bet panel, balance, popups, tournaments, nickname, settings. DOM is the right tool here.</p></div>
+  <div class="card verdict"><h4><span class="pill pixi">PixiJS</span> Reels &amp; effects</h4><p>Symbols, win lines, big win, particles at 60 fps on WebGL. Not rendered through React.</p></div>
+  <div class="card verdict"><h4><span class="pill core">game-core</span> Plain TypeScript</h4><p>Session, fingerprint, the <code>nextStep</code> loop, error policy, per-game adapters. Testable without a browser.</p></div>
+  <div class="card verdict"><h4>Lobby = separate app, many lobbies</h4><p>One lobby codebase, deployed as several lobbies (per provider or mix) driven by profiles from our gateway. Launches games in an iframe.</p></div>
+</div>
+<div class="card no"><h4>Not recommended</h4><p>Module Federation for games (each launch is already a fresh session + URL; iframes free GPU memory on exit) · Next.js (no SSR benefit for a static canvas bundle) · rendering reels in DOM/CSS (frame drops on low-end Android).</p></div>
+
+<!-- RUNTIME -->
+<h2 id="runtime">2. Runtime layers</h2>
+<p>Dependencies point down only. React and Pixi never call the API directly — they read from the store and send intents (spin, buy, pick bonus) to <code>game-core</code>.</p>
+<div class="card diagram">
+<svg viewBox="0 0 900 560" role="img" aria-label="Runtime layer diagram">
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0L10,5L0,10z"/></marker></defs>
+
+  <!-- lobby -->
+  <rect class="box react" x="20" y="20" width="190" height="80" rx="8"/>
+  <text x="115" y="50" text-anchor="middle" font-weight="600">Lobby app</text>
+  <text x="115" y="70" text-anchor="middle" class="sub">React · one per profile</text>
+  <text x="115" y="86" text-anchor="middle" class="sub mono">POST /v1/launch</text>
+  <path class="edge" d="M210,60 L258,60" marker-end="url(#a)"/>
+  <text x="234" y="50" text-anchor="middle" class="sub">iframe</text>
+
+  <!-- game frame -->
+  <rect class="frame" x="260" y="14" width="620" height="440" rx="12"/>
+  <text x="276" y="36" class="lbl">GAME APP · apps/games/&lt;sysname&gt;</text>
+
+  <!-- presentation row -->
+  <rect class="box react" x="290" y="54" width="270" height="96" rx="8"/>
+  <text x="425" y="80" text-anchor="middle" font-weight="600">HUD · React</text>
+  <text x="425" y="100" text-anchor="middle" class="sub">bet panel · balance · autoplay</text>
+  <text x="425" y="116" text-anchor="middle" class="sub">popups · tournaments · nickname</text>
+  <text x="425" y="132" text-anchor="middle" class="sub">Motion for UI transitions</text>
+
+  <rect class="box pixi" x="580" y="54" width="280" height="96" rx="8"/>
+  <text x="720" y="80" text-anchor="middle" font-weight="600">Renderer · PixiJS v8</text>
+  <text x="720" y="100" text-anchor="middle" class="sub">reels · win lines · big win</text>
+  <text x="720" y="116" text-anchor="middle" class="sub">GSAP timelines · Spine · particles</text>
+  <text x="720" y="132" text-anchor="middle" class="sub">imperative, not React re-renders</text>
+
+  <!-- store -->
+  <rect class="box core" x="290" y="190" width="570" height="64" rx="8"/>
+  <text x="575" y="216" text-anchor="middle" font-weight="600">Zustand store — the bridge</text>
+  <text x="575" y="236" text-anchor="middle" class="sub mono">session · config · displayedState · pendingResult · ui</text>
+
+  <path class="edge" d="M425,150 L425,188" marker-end="url(#a)" marker-start="url(#a)"/>
+  <path class="edge" d="M720,150 L720,188" marker-end="url(#a)" marker-start="url(#a)"/>
+  <text x="433" y="174" class="sub">select / intents</text>
+  <text x="728" y="174" class="sub">subscribe / done()</text>
+
+  <!-- game-core -->
+  <rect class="box core" x="290" y="292" width="570" height="64" rx="8"/>
+  <text x="575" y="318" text-anchor="middle" font-weight="600">game-core — plain TS</text>
+  <text x="575" y="338" text-anchor="middle" class="sub">nextStep loop · fingerprint · error policy · nextSessionKey handoff · per-game adapter</text>
+  <path class="edge" d="M575,254 L575,290" marker-end="url(#a)" marker-start="url(#a)"/>
+
+  <!-- game-api -->
+  <rect class="box core" x="290" y="378" width="570" height="56" rx="8"/>
+  <text x="575" y="402" text-anchor="middle" font-weight="600">protocol — GameTransport</text>
+  <text x="575" y="420" text-anchor="middle" class="sub">gateway (default) · direct · mock · canonical Zod schemas</text>
+  <path class="edge" d="M575,356 L575,376" marker-end="url(#a)"/>
+
+  <!-- backend -->
+  <rect class="box ext" x="290" y="490" width="270" height="56" rx="8"/>
+  <text x="425" y="514" text-anchor="middle" font-weight="600">Our Game Gateway /v1</text>
+  <text x="425" y="532" text-anchor="middle" class="sub">canonical API → provider connectors</text>
+  <path class="edge" d="M425,434 L425,488" marker-end="url(#a)"/>
+
+  <rect class="box ext" x="590" y="490" width="270" height="56" rx="8"/>
+  <text x="725" y="514" text-anchor="middle" font-weight="600">CDN</text>
+  <text x="725" y="532" text-anchor="middle" class="sub">atlases · Spine · audio · i18n</text>
+  <path class="edge dash" d="M800,150 C880,250 880,400 760,488" marker-end="url(#a)"/>
+  <text x="868" y="330" class="sub" text-anchor="end">assets</text>
+</svg>
+</div>
+
+<!-- PRESENT AFTER ANIMATE -->
+<h2 id="present">3. Present after animate</h2>
+<p>The response arrives in ~100 ms, the reels stop in ~2 s. If the HUD binds straight to the response, the balance and win jump before the reels land. Keep server truth and displayed state apart.</p>
+<div class="card diagram">
+<svg viewBox="0 0 900 170" role="img" aria-label="Present after animate flow">
+  <defs><marker id="p" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0L10,5L0,10z"/></marker></defs>
+  <rect class="box react" x="10" y="40" width="130" height="64" rx="8"/><text x="75" y="66" text-anchor="middle" font-weight="600">Spin click</text><text x="75" y="86" text-anchor="middle" class="sub">lock controls</text>
+  <path class="edge" d="M140,72 L176,72" marker-end="url(#p)"/>
+  <rect class="box core" x="178" y="40" width="150" height="64" rx="8"/><text x="253" y="66" text-anchor="middle" font-weight="600">POST /spin</text><text x="253" y="86" text-anchor="middle" class="sub">reels start blur loop</text>
+  <path class="edge" d="M328,72 L364,72" marker-end="url(#p)"/>
+  <rect class="box core" x="366" y="40" width="150" height="64" rx="8"/><text x="441" y="66" text-anchor="middle" font-weight="600">pendingResult</text><text x="441" y="86" text-anchor="middle" class="sub">adapter-normalized</text>
+  <path class="edge" d="M516,72 L552,72" marker-end="url(#p)"/>
+  <rect class="box pixi" x="554" y="40" width="150" height="64" rx="8"/><text x="629" y="66" text-anchor="middle" font-weight="600">Renderer plays</text><text x="629" y="86" text-anchor="middle" class="sub">stop · lines · big win</text>
+  <path class="edge" d="M704,72 L740,72" marker-end="url(#p)"/>
+  <rect class="box react" x="742" y="40" width="148" height="64" rx="8"/><text x="816" y="66" text-anchor="middle" font-weight="600">Commit</text><text x="816" y="86" text-anchor="middle" class="sub">balance · win · nextStep</text>
+  <text x="450" y="140" text-anchor="middle" class="sub">Errors (422) skip the renderer: stop the reels on the last displayed state, then show the error by level.</text>
+</svg>
+</div>
+<div class="grid">
+  <div class="card"><h4>nextStep is the only driver</h4><p>After commit, <code>game-core</code> calls the endpoint named by <code>nextStep</code> (auto for freespin/avalanche/respin, user-gated for spin/bonus pick).</p></div>
+  <div class="card"><h4>Error policy</h4><p><b>CRITICAL</b> → session-over screen. <b>ALERT</b> (3, 112) → dialog, retry allowed. <b>WARNING</b> (300) → silent/log.</p></div>
+  <div class="card"><h4>Recovery</h4><p>On reload, init's <code>lastSpin</code> + <code>mode</code> restore the screen; resume the loop from its <code>nextStep</code>.</p></div>
+</div>
+
+<!-- REPO -->
+<h2 id="repo">4. Monorepo layout</h2>
+<p>Nx + pnpm, same tooling as FreedX MFE. Shared code is shared at build time through packages, not at runtime.</p>
+<div class="grid">
+<div class="card"><pre class="shape"><span class="k">apps/</span>
+  lobby/               <span class="c">Vite + React, one codebase for all lobbies</span>
+  games/
+    gameone/           <span class="c">config, atlases, Spine, adapter</span>
+    shootland/         <span class="c">custom winWays renderer</span>
+    mystic-gates/      <span class="c">multi-bet adapter</span>
+<span class="k">packages/</span>
+  protocol/            <span class="c">canonical schemas + GameTransport</span>
+  lobby-kit/           <span class="c">lobby components, theming, profile types</span>
+  game-core/           <span class="c">loop, session, errors (no React)</span>
+  hud/                 <span class="c">React HUD components</span>
+  renderer/            <span class="c">Pixi reels, lines, big win</span>
+  i18n/                <span class="c">i18next + translationsUrl</span></pre></div>
+<div class="card"><h4>Per-game adapter contract</h4>
+<pre class="shape"><span class="k">interface</span> GameAdapter {
+  sysname: string
+  parse(raw: unknown): NormalizedState  <span class="c">// Zod</span>
+  createScene(ctx): Scene              <span class="c">// Pixi</span>
+}</pre>
+<p style="margin-top:10px">Standard games reuse the default adapter. The 7 variant games (Space Infinity, Fruit Storm, Shootland, Dark Portal, TapTap, Pinball Inferno, Mystic Gates/Charmana) ship their own. Game-specific differences never leak into <code>hud</code> or <code>game-core</code>.</p></div>
+</div>
+
+<!-- LOBBY -->
+<h2 id="lobby">5. Lobby</h2>
+<p>The lobby is a separate app. Every launch returns a <b>new gateway token + URL</b> of our game client, mounted in an iframe (or passed to the operator wrapper via <code>postMessage</code>).</p>
+<div class="tbl"><table>
+<tr><th></th><th>Separate app + iframe (recommended)</th><th>Module Federation</th></tr>
+<tr><td>Session model</td><td>Matches API: fresh session per launch</td><td>Must tear down / re-init session in-page</td></tr>
+<tr><td>GPU memory</td><td>Freed when iframe is removed</td><td>WebGL textures can leak across games</td></tr>
+<tr><td>Versioning</td><td>Each game ships independently</td><td>React / shared singletons must stay aligned</td></tr>
+<tr><td>Operator embedding</td><td>Same model operators already use</td><td>Extra wrapper needed anyway</td></tr>
+<tr><td>Transitions</td><td>Loading screen in iframe</td><td>Smoother in-page transition</td></tr>
+</table></div>
+<div class="card"><h4>Lobby flow (through our gateway)</h4><p><code>GET /v1/lobbies/{lobbyId}</code> (profile) → <code>GET /v1/lobbies/{lobbyId}/catalog</code> (React Query, cacheable) → user picks game → <code>POST /v1/launch {lobbyId, gameId}</code> → mount <code>url</code> in iframe, or <code>postMessage</code> it to the operator wrapper. Card hover/press and grid transitions use Motion.</p></div>
+
+<!-- MULTIPLE LOBBIES -->
+<h2 id="lobbies">5b. Multiple lobbies, shipped per provider</h2>
+<p>Because we own the gateway, a lobby is just <b>a profile + a deployment</b>. One lobby codebase serves a Provider A lobby, a Provider B lobby, and a combined lobby. The gateway decides what each lobby may show and launch.</p>
+
+<div class="card diagram">
+<svg viewBox="0 0 900 440" role="img" aria-label="Multiple lobbies architecture">
+  <defs><marker id="ml" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0L10,5L0,10z"/></marker></defs>
+  <rect class="box react" x="40" y="20" width="250" height="80" rx="8"/>
+  <text x="165" y="46" text-anchor="middle" font-weight="600">Lobby A</text>
+  <text x="165" y="66" text-anchor="middle" class="sub mono">lobby-a.yoursite.com</text>
+  <text x="165" y="84" text-anchor="middle" class="sub">profile: prov-a</text>
+  <rect class="box react" x="325" y="20" width="250" height="80" rx="8"/>
+  <text x="450" y="46" text-anchor="middle" font-weight="600">Lobby B</text>
+  <text x="450" y="66" text-anchor="middle" class="sub mono">lobby-b.yoursite.com</text>
+  <text x="450" y="84" text-anchor="middle" class="sub">profile: prov-b</text>
+  <rect class="box react" x="610" y="20" width="250" height="80" rx="8"/>
+  <text x="735" y="46" text-anchor="middle" font-weight="600">Lobby All</text>
+  <text x="735" y="66" text-anchor="middle" class="sub mono">play.yoursite.com</text>
+  <text x="735" y="84" text-anchor="middle" class="sub">profile: prov-a + prov-b</text>
+  <text x="450" y="120" text-anchor="middle" class="sub">same apps/lobby build — different profile</text>
+
+  <path class="edge" d="M165,100 L165,148" marker-end="url(#ml)"/>
+  <path class="edge" d="M450,126 L450,148" marker-end="url(#ml)"/>
+  <path class="edge" d="M735,100 L735,148" marker-end="url(#ml)"/>
+
+  <rect class="frame" x="30" y="150" width="840" height="100" rx="12"/>
+  <text x="46" y="168" class="lbl">OUR GAME GATEWAY</text>
+  <rect class="box core" x="60" y="176" width="240" height="60" rx="8"/>
+  <text x="180" y="200" text-anchor="middle" font-weight="600">Lobby registry</text>
+  <text x="180" y="218" text-anchor="middle" class="sub">lobbyId → providers, theme</text>
+  <rect class="box core" x="330" y="176" width="240" height="60" rx="8"/>
+  <text x="450" y="200" text-anchor="middle" font-weight="600">Catalog filter</text>
+  <text x="450" y="218" text-anchor="middle" class="sub">only allowed providers' games</text>
+  <rect class="box core" x="600" y="176" width="240" height="60" rx="8"/>
+  <text x="720" y="200" text-anchor="middle" font-weight="600">Launch guard</text>
+  <text x="720" y="218" text-anchor="middle" class="sub">rejects games outside the lobby</text>
+
+  <path class="edge" d="M450,250 L450,288" marker-end="url(#ml)"/>
+  <rect class="box pixi" x="40" y="290" width="820" height="52" rx="8"/>
+  <text x="450" y="312" text-anchor="middle" font-weight="600">Shared game clients — fruitstorm, gameone, … (deployed once)</text>
+  <text x="450" y="330" text-anchor="middle" class="sub">token says which provider + which lobby launched it</text>
+
+  <path class="edge" d="M310,342 L310,378" marker-end="url(#ml)"/>
+  <path class="edge" d="M590,342 L590,378" marker-end="url(#ml)"/>
+  <text x="450" y="366" text-anchor="middle" class="sub">via connectors</text>
+  <rect class="box" x="200" y="380" width="220" height="44" rx="8"/>
+  <text x="310" y="407" text-anchor="middle" font-weight="600">Provider A</text>
+  <rect class="box" x="480" y="380" width="220" height="44" rx="8"/>
+  <text x="590" y="407" text-anchor="middle" font-weight="600">Provider B</text>
+</svg>
+</div>
+
+<h3>Lobby profile (stored in the gateway)</h3>
+<div class="grid">
+<div class="card">
+<pre class="shape">{
+  <span class="k">"id"</span>: "lobby-b",
+  <span class="k">"hosts"</span>: ["lobby-b.yoursite.com"],
+  <span class="k">"providers"</span>: ["prov-b"],
+  <span class="k">"theme"</span>: {
+    "tokens": "cdn/lobbies/lobby-b/theme.json",
+    "logo": "cdn/lobbies/lobby-b/logo.svg"
+  },
+  <span class="k">"layout"</span>: {
+    "hero": "tournament",
+    "categories": ["new", "popular", "buy-feature"]
+  },
+  <span class="k">"features"</span>: { "search": true, "tournaments": true,
+                "favourites": true },
+  <span class="k">"operators"</span>: ["op-1", "op-7"]
+}</pre></div>
+<div class="card"><h4>Example lobbies</h4>
+<div class="tbl" style="border:0"><table>
+<tr><th>Lobby</th><th>Providers</th><th>Shows</th></tr>
+<tr><td><code>lobby-a</code></td><td>prov-a</td><td>Fruit Storm (A), Game One</td></tr>
+<tr><td><code>lobby-b</code></td><td>prov-b</td><td>Fruit Storm (B)</td></tr>
+<tr><td><code>lobby-all</code></td><td>prov-a, prov-b</td><td>Fruit Storm A, Fruit Storm B, Game One</td></tr>
+</table></div>
+<p style="margin-top:8px">Fruit Storm uses the same client in every lobby; only the provider behind the launch token differs.</p></div>
+</div>
+
+<h3>How a lobby knows which profile it is</h3>
+<div class="tbl"><table>
+<tr><th></th><th>Runtime profile (recommended)</th><th>Build-time profile</th></tr>
+<tr><td>How</td><td>One build. At startup: <code>GET /v1/lobbies/resolve?host=…</code> (or <code>?lobby=</code> param) returns the profile</td><td><code>LOBBY_ID=lobby-b bun run build</code> bakes profile + assets into the bundle</td></tr>
+<tr><td>Add a new lobby</td><td>Add profile in gateway + DNS — <b>no frontend release</b></td><td>New CI build and deploy</td></tr>
+<tr><td>Change providers / categories</td><td>Instant, from the gateway</td><td>Rebuild</td></tr>
+<tr><td>Custom code per lobby</td><td>Limited to config, theme, layout slots</td><td>Possible</td></tr>
+<tr><td>Use when</td><td>Default for all lobbies</td><td>Only for a lobby that needs its own code</td></tr>
+</table></div>
+
+<h3>Levels of customization (use the lowest that works)</h3>
+<div class="grid">
+  <div class="card"><h4>1 · Config</h4><p>Providers, categories, sort order, enabled features. Pure profile data.</p></div>
+  <div class="card"><h4>2 · Theme</h4><p>Design tokens, logo, fonts, card style. Loaded from the profile's theme URL into CSS variables.</p></div>
+  <div class="card"><h4>3 · Layout slots</h4><p>Hero banner type, category rows, promo blocks — chosen by name from components in <code>lobby-kit</code>.</p></div>
+  <div class="card"><h4>4 · Custom app</h4><p>Thin <code>apps/lobby-&lt;id&gt;</code> reusing <code>lobby-kit</code>. Only when a lobby truly needs different code.</p></div>
+</div>
+
+<h3>Rules the gateway enforces</h3>
+<div class="grid">
+  <div class="card"><h4>Filter on the server</h4><p>The catalog endpoint returns only the lobby's providers. Never rely on the lobby to hide games.</p></div>
+  <div class="card"><h4>Guard the launch</h4><p><code>POST /v1/launch</code> checks <code>gameId</code> belongs to the lobby's providers and the operator — a hand-crafted request from Lobby B cannot start a Provider A game.</p></div>
+  <div class="card"><h4>Token carries <code>lobbyId</code></h4><p>The game's home button returns to the lobby that launched it; analytics and tournaments can be split per lobby.</p></div>
+</div>
+
+<h3>Shipping</h3>
+<div class="card"><ul>
+  <li><b>Game clients</b> — built and deployed once per game; every lobby uses the same URLs.</li>
+  <li><b>Lobby</b> — built once, the same artifact deployed to every lobby host (or CDN path). The profile is resolved at runtime.</li>
+  <li><b>New provider lobby</b> — add connector + profile in the gateway, point DNS. No frontend release.</li>
+  <li><b>Custom lobby</b> (level 4) — its own CI job in the monorepo, deployed independently.</li>
+</ul></div>
+
+<!-- ANIMATION -->
+<h2 id="animation">6. Animation stack</h2>
+<div class="tbl"><table>
+<tr><th>Layer</th><th>Job</th><th>Tech</th><th>Why</th></tr>
+<tr><td><span class="pill pixi">canvas</span></td><td>Reels, symbols, effects</td><td><b>PixiJS v8</b></td><td>Fast 2D WebGL (WebGPU when available), batching, asset bundles</td></tr>
+<tr><td><span class="pill pixi">canvas</span></td><td>Reel stops, win counters, big-win stages</td><td><b>GSAP</b> + PixiPlugin</td><td>Timelines, easing, sequencing; all plugins free</td></tr>
+<tr><td><span class="pill pixi">canvas</span></td><td>Characters, animated symbols, intros</td><td><b>Spine</b> (<code>@esotericsoftware/spine-pixi-v8</code>)</td><td>Slot-industry standard skeletal animation; free runtime, paid editor</td></tr>
+<tr><td><span class="pill pixi">canvas</span></td><td>Coins, sparks, confetti</td><td>Pixi <code>ParticleContainer</code></td><td>Built in, no extra dependency</td></tr>
+<tr><td><span class="pill react">DOM</span></td><td>Modals, popups, lobby cards, HUD state changes</td><td><b>Motion</b> (<code>motion/react</code>) or CSS</td><td>Declarative React animation, layout transitions</td></tr>
+<tr><td><span class="pill react">DOM</span></td><td>Small icon loops</td><td>Lottie (optional)</td><td>Already used on FreedX mobile</td></tr>
+</table></div>
+<div class="grid" style="margin-top:12px">
+  <div class="card"><h4>Spine vs Rive</h4><p>Rive has built-in state machines but runs its own canvas runtime — awkward inside a Pixi scene. Pick Spine unless artists already work in Rive.</p></div>
+  <div class="card"><h4>@pixi/react?</h4><p>Fine for declaring scene structure. Per-frame reel motion stays imperative, driven from the store, so React never re-renders per frame.</p></div>
+  <div class="card"><h4>Asset pipeline</h4><p>TexturePacker atlases → Pixi <code>Assets</code> bundles per game. Send <code>POST /stat/loaded</code> after assets load, not on page load.</p></div>
+</div>
+
+<!-- FULL STACK -->
+<h2 id="stack">7. Full stack</h2>
+<div class="tbl"><table>
+<tr><th>Concern</th><th>Choice</th></tr>
+<tr><td>Language / build</td><td>TypeScript strict · Vite · Nx + pnpm</td></tr>
+<tr><td>UI</td><td>React 19</td></tr>
+<tr><td>Client state</td><td>Zustand (session, displayed state, pending result, UI)</td></tr>
+<tr><td>Cacheable server data</td><td>React Query — tournaments, lobby content only (not spins)</td></tr>
+<tr><td>Validation</td><td>Zod 4 at the API edge, <code>z.infer</code> types</td></tr>
+<tr><td>Money</td><td>Decimal-safe handling of numeric strings; format with <code>currencyData.rounding</code></td></tr>
+<tr><td>Rendering / animation</td><td>PixiJS v8 · GSAP · Spine · Motion</td></tr>
+<tr><td>Audio</td><td><code>@pixi/sound</code> v6 (sprites, mobile unlock, loaded through the same Pixi <code>Assets</code> bundles). Fallback: Howler.js if long music tracks need HTML5 streaming on low-end mobile</td></tr>
+<tr><td>i18n</td><td>i18next loading <code>translationsUrl</code> with <code>fallbackTranslationsUrl</code></td></tr>
+<tr><td>Testing</td><td>Vitest for <code>game-core</code> + adapters against the doc's JSON examples; Playwright smoke for a spin cycle</td></tr>
+</table></div>
+
+<!-- RISKS -->
+<h2 id="risks">8. Risks to watch</h2>
+<div class="tbl"><table class="risk">
+<tr><th>Risk</th><th>Mitigation</th></tr>
+<tr><td>Low-end Android performance</td><td>Set a frame-time budget early; test on real devices; cap resolution and particle counts</td></tr>
+<tr><td>Orientation / resize</td><td>One layout service feeding both the HUD and the Pixi stage; test portrait + landscape from day one</td></tr>
+<tr><td>Spine licensing</td><td>Confirm the editor licence for the art team before production</td></tr>
+<tr><td>Variant state drift</td><td>Zod-validate every response in dev; contract tests per adapter</td></tr>
+<tr><td>Self-lockout (error 112)</td><td>Call init exactly once per game start; never on retry</td></tr>
+</table></div>
+
+<footer>Proposal · 2026-11-21 · <a href="index.html">← API architecture</a></footer>
+</main>
+</body>
+</html>
