@@ -7,5 +7,12 @@
     "tags": [
       "type:app"
     ]
+  },
+  "dependencies": {
+    "pixi.js": "8.23.0",
+    "zustand": "5.1.0",
+    "@fep/protocol": "workspace:*",
+    "@fep/game-core": "workspace:*",
+    "@fep/renderer": "workspace:*"
   }
 }

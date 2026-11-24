@@ -29,5 +29,16 @@
     "eslint.config.cjs",
     "eslint.config.mjs"
   ],
-  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx"]
+  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx"],
+  "references": [
+    {
+      "path": "../../../packages/renderer/tsconfig.lib.json"
+    },
+    {
+      "path": "../../../packages/game-core/tsconfig.lib.json"
+    },
+    {
+      "path": "../../../packages/protocol/tsconfig.lib.json"
+    }
+  ]
 }
