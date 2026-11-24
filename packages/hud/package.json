@@ -1,23 +1,23 @@
 {
-  "name": "@fep/hud",
-  "version": "0.0.1",
-  "exports": {
-    "./slot": {
-      "types": "./src/slot/index.ts",
-      "import": "./src/slot/index.ts",
-      "default": "./src/slot/index.ts"
+    "name": "@fep/hud",
+    "version": "0.0.1",
+    "exports": {
+        "./slot": {
+            "types": "./src/slot/index.ts",
+            "import": "./src/slot/index.ts",
+            "default": "./src/slot/index.ts"
+        },
+        "./package.json": "./package.json"
     },
-    "./package.json": "./package.json"
-  },
-  "nx": {
-    "name": "hud",
-    "tags": [
-      "type:ui"
-    ]
-  },
-  "dependencies": {
-    "zustand": "5.1.0",
-    "@fep/protocol": "workspace:*",
-    "@fep/game-core": "workspace:*"
-  }
+    "nx": {
+        "name": "hud",
+        "tags": [
+            "type:ui"
+        ]
+    },
+    "dependencies": {
+        "zustand": "5.1.0",
+        "@fep/protocol": "workspace:*",
+        "@fep/game-core": "workspace:*"
+    }
 }

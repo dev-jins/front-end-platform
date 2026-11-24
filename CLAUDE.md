@@ -28,7 +28,7 @@ front-end-platform/
 │   ├── hud            # React HUD: bet panel, balance, popups (@fep/hud)
 │   ├── lobby-kit      # lobby components, theming, profile types (@fep/lobby-kit)
 │   └── i18n           # i18next + translationsUrl (@fep/i18n)
-└── docs/              # architecture + API docs (not formatted by Prettier)
+└── docs/              # architecture + API docs (not formatted by Biome)
 ```
 
 ### Layering
@@ -63,7 +63,7 @@ protocol)
 | UI         | React 19                                   | installed |
 | TypeScript | 6.0, strict                                | installed |
 | Testing    | Vitest 5, React Testing Library, jsdom     | installed |
-| Linting    | ESLint 9 (flat config), Prettier 3.8       | installed |
+| Linting    | ESLint 9 (flat config), Biome 2.5          | installed |
 | Commits    | Husky, commitlint, lint-staged             | installed |
 | State      | Zustand (store), React Query (lobby/tours) | planned   |
 | Validation | Zod 4                                      | planned   |
@@ -95,7 +95,8 @@ bun nx test <PROJECT>
 bun nx test <PROJECT> --coverage
 bun nx typecheck <PROJECT>
 bun nx run-many -t lint test typecheck build   # what must pass before merge
-bun run format                  # nx format:write
+bun run format                  # biome check --write
+bun run format:check            # biome check
 bun nx graph
 
 # Scaffolding (then add nx.tags + commitlint scope)
@@ -131,11 +132,13 @@ Example: `ech/feat/spin-loop`, `ech/fix/fingerprint-retry`
 
 ### Code Style
 
+- **Formatter/linter:** Biome (`biome.json`); ESLint only for Nx module boundaries
+- **Indent:** 4 spaces
 - **Semicolons:** required
 - **Quotes:** double quotes
-- **Print width:** 120 characters
+- **Line width:** 120 characters
 - **Trailing commas:** ES5
-- **Import sorting:** via `@trivago/prettier-plugin-sort-imports` (external → `@fep/*` → relative)
+- **Import sorting:** via Biome `organizeImports` assist
 
 ### TypeScript
 
@@ -143,6 +146,30 @@ Example: `ech/feat/spin-loop`, `ech/fix/fingerprint-retry`
 - Strict mode enabled
 - Libraries expose their API from `src/index.ts`; import by package name (`@fep/game-core`), never deep paths
 - Zod at the API edge, types via `z.infer`
+- `moduleResolution: "bundler"` (set once in `tsconfig.base.json`): relative imports have no extension — `./money`, not
+  `./money.js`
+
+### Package Layout
+
+One export per file — never mix types, schemas, constants and logic in one file. Group files by kind inside each game
+family folder (`common/`, `slot/`):
+
+```
+src/
+├── index.ts            # barrel: `export *` for code, `export type *` for type files
+├── store/              # all zustand code, root level: store creation, state types, selector hooks, subscriptions
+├── common/ | slot/
+│   ├── schemas/        # <name>.schema.ts — one Zod schema each
+│   ├── types/          # <name>.type.ts — one type/interface each (z.infer types live here, not next to the schema)
+│   ├── config/         # static lookup maps, e.g. error codes
+│   ├── constants/
+│   ├── utils/          # one function each
+│   ├── errors/         # error classes
+│   └── <feature>/      # e.g. session/, transport/, adapters/
+```
+
+- Specs sit next to the file they test: `create-slot-session.spec.ts`
+- Internal helpers (schemas, types) get their own file too, but stay out of the barrel
 
 ### Testing
 
@@ -161,4 +188,4 @@ Mark with: `TODO[techdebt]: <description and proposed solution>`
 - All lint/test/typecheck/build targets must pass before merge
 - Trunk-based development workflow
 - No CI pipeline yet; no NX Cloud
-- `docs/` is excluded from Prettier — don't reformat it
+- `docs/` is excluded from Biome — don't reformat it

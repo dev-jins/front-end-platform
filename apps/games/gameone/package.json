@@ -1,19 +1,19 @@
 {
-  "name": "@fep/gameone",
-  "version": "0.0.1",
-  "private": true,
-  "nx": {
-    "name": "gameone",
-    "tags": [
-      "type:app"
-    ]
-  },
-  "dependencies": {
-    "pixi.js": "8.23.0",
-    "zustand": "5.1.0",
-    "@fep/protocol": "workspace:*",
-    "@fep/game-core": "workspace:*",
-    "@fep/renderer": "workspace:*",
-    "@fep/hud": "workspace:*"
-  }
+    "name": "@fep/gameone",
+    "version": "0.0.1",
+    "private": true,
+    "nx": {
+        "name": "gameone",
+        "tags": [
+            "type:app"
+        ]
+    },
+    "dependencies": {
+        "pixi.js": "8.23.0",
+        "zustand": "5.1.0",
+        "@fep/protocol": "workspace:*",
+        "@fep/game-core": "workspace:*",
+        "@fep/renderer": "workspace:*",
+        "@fep/hud": "workspace:*"
+    }
 }

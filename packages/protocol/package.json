@@ -1,35 +1,35 @@
 {
-  "name": "@fep/protocol",
-  "version": "0.0.1",
-  "private": true,
-  "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
-  "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts",
-      "default": "./src/index.ts"
+    "name": "@fep/protocol",
+    "version": "0.0.1",
+    "private": true,
+    "type": "module",
+    "main": "./src/index.ts",
+    "types": "./src/index.ts",
+    "exports": {
+        ".": {
+            "types": "./src/index.ts",
+            "import": "./src/index.ts",
+            "default": "./src/index.ts"
+        },
+        "./slot": {
+            "types": "./src/slot/index.ts",
+            "import": "./src/slot/index.ts",
+            "default": "./src/slot/index.ts"
+        },
+        "./testing": {
+            "types": "./tests/doc-examples.ts",
+            "import": "./tests/doc-examples.ts",
+            "default": "./tests/doc-examples.ts"
+        },
+        "./package.json": "./package.json"
     },
-    "./slot": {
-      "types": "./src/slot/index.ts",
-      "import": "./src/slot/index.ts",
-      "default": "./src/slot/index.ts"
+    "nx": {
+        "name": "protocol",
+        "tags": [
+            "type:protocol"
+        ]
     },
-    "./testing": {
-      "types": "./tests/doc-examples.ts",
-      "import": "./tests/doc-examples.ts",
-      "default": "./tests/doc-examples.ts"
-    },
-    "./package.json": "./package.json"
-  },
-  "nx": {
-    "name": "protocol",
-    "tags": [
-      "type:protocol"
-    ]
-  },
-  "dependencies": {
-    "zod": "^4.6.7"
-  }
+    "dependencies": {
+        "zod": "^4.6.7"
+    }
 }
