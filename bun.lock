@@ -57,6 +57,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@fep/game-core": "workspace:*",
+        "@fep/hud": "workspace:*",
         "@fep/protocol": "workspace:*",
         "@fep/renderer": "workspace:*",
         "pixi.js": "8.23.0",
@@ -78,6 +79,11 @@
     "packages/hud": {
       "name": "@fep/hud",
       "version": "0.0.1",
+      "dependencies": {
+        "@fep/game-core": "workspace:*",
+        "@fep/protocol": "workspace:*",
+        "zustand": "5.1.0",
+      },
     },
     "packages/i18n": {
       "name": "@fep/i18n",

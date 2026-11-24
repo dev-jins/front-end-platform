@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-const DOC = new URL("../../../docs/Test Game Front API.md", import.meta.url);
+// import.meta.dirname, not import.meta.url: under jsdom the module URL is not a file: URL.
+const DOC = join(import.meta.dirname, "../../../docs/Test Game Front API.md");
 
 /**
  * JSON examples under a doc heading, in document order. Schema description blocks (with `//` comments)
