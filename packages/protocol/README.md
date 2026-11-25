@@ -36,6 +36,12 @@ mappers, outside this package.
 - `crashCommandSchema` / `crashCommandResultSchema` — `bet` / `cancelBet` / `cashout` with `requestId` and `lane`.
 - `crashEventSchema` — stream events with `seq` + `serverTime`; the first one is always `snapshot`.
 - `parseCrashEvent(raw)` — returns null for unknown event types (log and skip), throws on a bad known one.
+- `CrashTransport` — `init()`, `play(command)`, `subscribe({ onEvent, onStatus, onError })` → close function.
+  - `createGatewayCrashTransport({ baseUrl, launchToken })` — `POST /v1/sessions` with the launch token, then the
+    session token for `/v1/play` and the SSE stream (read with `fetch`, not `EventSource`, to send `Authorization`).
+    Reconnects with `Last-Event-ID` (1s, 2s, 5s…); 401 / 403 / 404 → `offline`, no retry.
+  - `createMockCrashTransport({ init, events, speed, play })` — replays a recorded timeline by `serverTime`.
+  - The direct transport (Provider A in the browser) lives with Provider A's mapper, not here.
 
 ## Tests
 
