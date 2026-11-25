@@ -7,7 +7,7 @@ family.
 | --------------------- | ------------- | -------------------------------------------------------------------------------------------------------- |
 | `@fep/protocol`       | `src/common/` | Shared by every family: money, balance, error levels / bodies, `GameApiError`, `ERROR_CODE`, tournaments |
 | `@fep/protocol/slot`  | `src/slot/`   | Slot games: init, `GameState`, action wrapper, `SLOT_ERROR_CODE`, `SlotTransport` (HTTP)                 |
-| `@fep/protocol/crash` | —             | Not yet: added with the crash API spec (socket messages + its own transport)                             |
+| `@fep/protocol/crash` | `src/crash/`  | Crash games, canonical protocol (gateway): init + capabilities, `/v1/play` commands, stream events |
 
 A family never imports another family; shared code moves to `common/` only when a second family actually needs it.
 
@@ -25,6 +25,17 @@ A family never imports another family; shared code moves to `common/` only when 
   the game adapter parses them (standard games use `standardActionResponseSchema`).
 - `createSlotHttpTransport({ baseUrl, sessionKey })` — stateless, one session; the caller (game-core) owns the
   fingerprint.
+
+## Crash
+
+Canonical protocol, not a provider's native API (see `docs/crash-architecture.html`). Provider translation lives in
+mappers, outside this package.
+
+- `crashInitSchema` — session, game, money, bets, `capabilities.crash` (lanes, auto cash-out, curve, live bets),
+  `stream`.
+- `crashCommandSchema` / `crashCommandResultSchema` — `bet` / `cancelBet` / `cashout` with `requestId` and `lane`.
+- `crashEventSchema` — stream events with `seq` + `serverTime`; the first one is always `snapshot`.
+- `parseCrashEvent(raw)` — returns null for unknown event types (log and skip), throws on a bad known one.
 
 ## Tests
 
