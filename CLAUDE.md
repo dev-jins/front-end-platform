@@ -12,6 +12,8 @@ Read before changing architecture:
 - `docs/index.html` — Game Front API architecture (session, nextStep flow, response model, variants, errors)
 - `docs/Test Game Front API.md` — the API contract itself, with JSON examples
 - `docs/multi-provider-gateway.html`, `docs/free-dev-infrastructure.html` — gateway and infra proposals
+- `docs/crash-architecture.html` — crash game family next to slots (CrashTransport, gateway stream hub, multi-provider,
+  SSE/WebSocket config); `docs/crash-api.md` is Provider A's native crash API
 
 ## Architecture
 
