@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crash Games Architecture</title>
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#1b1d21; --ink-2:#555b66; --line:#d9dbe0;
+  --accent:#2f5bd3; --accent-soft:#e6edfc; --ok:#1f8a4c; --ok-soft:#e3f4ea;
+  --warn:#a86300; --warn-soft:#fbf0dc; --bad:#c2352b; --bad-soft:#fbe5e3;
+  --violet:#7a4cc2; --violet-soft:#efe8fa;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121417; --surface:#1b1e23; --ink:#e8eaed; --ink-2:#a2a8b3; --line:#30353d;
+    --accent:#7aa2ff; --accent-soft:#1f2a44; --ok:#5cc98a; --ok-soft:#173022;
+    --warn:#e6a64a; --warn-soft:#352812; --bad:#ff7b70; --bad-soft:#3a1a18;
+    --violet:#b893f5; --violet-soft:#2a2140;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121417; --surface:#1b1e23; --ink:#e8eaed; --ink-2:#a2a8b3; --line:#30353d;
+  --accent:#7aa2ff; --accent-soft:#1f2a44; --ok:#5cc98a; --ok-soft:#173022;
+  --warn:#e6a64a; --warn-soft:#352812; --bad:#ff7b70; --bad-soft:#3a1a18;
+  --violet:#b893f5; --violet-soft:#2a2140;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:28px;margin:0 0 4px}
+h2{font-size:20px;margin:48px 0 6px;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:15px;margin:20px 0 6px}
+p.lead{color:var(--ink-2);margin:0 0 20px;max-width:780px}
+p{max-width:820px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em;background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 8px}
+nav a{font-size:13px;text-decoration:none;border:1px solid var(--line);background:var(--surface);padding:4px 10px;border-radius:999px}
+nav a:hover{border-color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
+.diagram{overflow-x:auto}
+.diagram svg{display:block;width:100%;min-width:640px;height:auto}
+svg text{fill:var(--ink);font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+svg .sub{fill:var(--ink-2);font-size:11.5px}
+svg .mono{font-family:var(--mono);font-size:12px}
+svg .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+svg .box.core{fill:var(--accent-soft);stroke:var(--accent)}
+svg .box.react{fill:var(--ok-soft);stroke:var(--ok)}
+svg .box.pixi{fill:var(--violet-soft);stroke:var(--violet)}
+svg .box.warn{fill:var(--warn-soft);stroke:var(--warn)}
+svg .box.bad{fill:var(--bad-soft);stroke:var(--bad)}
+svg .box.ext{stroke-dasharray:5 4}
+svg .frame{fill:none;stroke:var(--ink-2);stroke-width:1.2;stroke-dasharray:6 5}
+svg .edge{stroke:var(--ink-2);stroke-width:1.5;fill:none}
+svg .edge.dash{stroke-dasharray:5 4}
+svg .edge.live{stroke:var(--warn)}
+svg .head{fill:var(--ink-2)}
+svg .head.live{fill:var(--warn)}
+svg .lbl{fill:var(--ink-2);font-size:11px;font-weight:600;letter-spacing:.05em}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.grid .card{margin:0}
+.card h4{margin:0 0 6px;font-size:14px}
+.card p,.card ul{margin:0;font-size:14px;color:var(--ink-2)}
+.card ul{padding-left:18px}
+.card li{margin:4px 0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2)}
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.shape{font-family:var(--mono);font-size:12.5px;line-height:1.7;white-space:pre;overflow-x:auto;margin:0}
+.shape .c{color:var(--ink-2)} .shape .k{color:var(--accent);font-weight:600}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;margin-right:4px}
+.pill.react{background:var(--ok-soft);color:var(--ok)}
+.pill.pixi{background:var(--violet-soft);color:var(--violet)}
+.pill.core{background:var(--accent-soft);color:var(--accent)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.verdict{border-left:4px solid var(--accent)}
+.no{border-left:4px solid var(--bad)}
+.note{border-left:4px solid var(--warn)}
+.risk td:first-child{font-weight:600}
+footer{margin-top:48px;color:var(--ink-2);font-size:13px}
+</style>
+</head>
+<body>
+<main>
+<h1>Crash Games Architecture</h1>
+<p class="lead">Crash is a second game family that lives <b>next to</b> slots, not instead of them. Like slots, crash games speak our <b>canonical protocol</b> through a transport port (gateway · direct · mock), so one crash client can run on several providers. What is new: a live event stream that the gateway relays from each provider's realtime channel. Provider A's native API is <code>docs/crash-api.md</code> (Game API + Mercure). Companion to the <a href="frontend-architecture.html">client architecture</a> and the <a href="multi-provider-gateway.html">multi-provider gateway</a>.</p>
+
+<nav>
+  <a href="#summary">Summary</a>
+  <a href="#together">Living with slots</a>
+  <a href="#diff">Crash vs slot</a>
+  <a href="#gateway">Gateway</a>
+  <a href="#config">SSE or WS config</a>
+  <a href="#canonical">Canonical protocol</a>
+  <a href="#providers">Multiple providers</a>
+  <a href="#runtime">Client layers</a>
+  <a href="#connect">Connect &amp; resync</a>
+  <a href="#round">Round lifecycle</a>
+  <a href="#store">Store</a>
+  <a href="#render">Multiplier</a>
+  <a href="#actions">Bet &amp; cash out</a>
+  <a href="#lanes">Lanes</a>
+  <a href="#repo">Packages</a>
+  <a href="#phases">Phases</a>
+  <a href="#risks">Risks</a>
+</nav>
+
+<!-- SUMMARY -->
+<h2 id="summary">1. Recommendation in one view</h2>
+<div class="card note"><h4>"Sockets" here means a server push stream</h4><p>Provider A pushes over Mercure (SSE). Other providers may use WebSocket or polling. The client never sees which: it receives our canonical event stream from the gateway (SSE), and sends commands over HTTPS <code>/v1/play</code>, exactly like slots.</p></div>
+<div class="grid">
+  <div class="card verdict"><h4><span class="pill core">protocol</span> One port, three transports</h4><p><code>CrashTransport</code>: <code>init</code>, <code>play</code>, <code>subscribe</code>. Gateway in production, Direct for Provider A before the gateway exists, Mock for dev and tests.</p></div>
+  <div class="card verdict"><h4><span class="pill warn">gateway</span> Relays the stream</h4><p>Connectors subscribe upstream (Mercure / WS / poll), translate with the provider's pure mapper, fan out public round events once per room, and add <code>seq</code> + <code>serverTime</code>.</p></div>
+  <div class="card verdict"><h4><span class="pill core">mappers</span> Per provider, pure</h4><p><code>mappers/provider-a/crash</code> turns native events, snapshots and commands into canonical ones. Same file runs in the browser (Direct) and in the gateway connector.</p></div>
+  <div class="card verdict"><h4><span class="pill core">game-core</span> Event reducer</h4><p>No <code>nextStep</code> loop. Stream starts with a <code>snapshot</code>, then ordered events fold into the store. React and Pixi only read the store.</p></div>
+</div>
+<div class="card no"><h4>Not recommended</h4><p>Client code that knows Mercure topics, <code>subscriberToken</code> or <code>bet_ok</code> outside the provider mapper · one upstream connection per player for public round data · a client build per provider · native <code>EventSource</code> (no auth header).</p></div>
+
+<!-- TOGETHER -->
+<h2 id="together">2. Slots and crash side by side</h2>
+<p>The platform hosts game families. Each game app picks one family; the lobby, launch, gateway and session handling are shared. Nothing in the slot path changes to add crash.</p>
+<div class="card diagram">
+<svg viewBox="0 0 900 330" role="img" aria-label="Slot and crash families sharing the platform">
+  <defs><marker id="t" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0L10,5L0,10z"/></marker></defs>
+  <rect class="box react" x="300" y="14" width="300" height="56" rx="8"/>
+  <text x="450" y="38" text-anchor="middle" font-weight="600">Lobby · one catalog, both families</text>
+  <text x="450" y="56" text-anchor="middle" class="sub">same launch + iframe for every game</text>
+  <path class="edge" d="M380,70 L230,104" marker-end="url(#t)"/>
+  <path class="edge" d="M520,70 L670,104" marker-end="url(#t)"/>
+
+  <rect class="frame" x="20" y="106" width="420" height="140" rx="12"/>
+  <text x="36" y="126" class="lbl">SLOT FAMILY · unchanged</text>
+  <rect class="box" x="40" y="136" width="380" height="30" rx="6"/><text x="230" y="156" text-anchor="middle" class="sub mono">apps/games/gameone, …</text>
+  <rect class="box core" x="40" y="172" width="185" height="30" rx="6"/><text x="132" y="192" text-anchor="middle" class="sub mono">@fep/protocol/slot</text>
+  <rect class="box core" x="235" y="172" width="185" height="30" rx="6"/><text x="327" y="192" text-anchor="middle" class="sub mono">game-core/slot · nextStep</text>
+  <rect class="box pixi" x="40" y="208" width="185" height="30" rx="6"/><text x="132" y="228" text-anchor="middle" class="sub mono">renderer/slot · reels</text>
+  <rect class="box react" x="235" y="208" width="185" height="30" rx="6"/><text x="327" y="228" text-anchor="middle" class="sub mono">hud/slot · spin panel</text>
+
+  <rect class="frame" x="460" y="106" width="420" height="140" rx="12"/>
+  <text x="476" y="126" class="lbl">CRASH FAMILY · new, alongside</text>
+  <rect class="box" x="480" y="136" width="380" height="30" rx="6"/><text x="670" y="156" text-anchor="middle" class="sub mono">apps/games/&lt;crash-client&gt;, …</text>
+  <rect class="box core" x="480" y="172" width="185" height="30" rx="6"/><text x="572" y="192" text-anchor="middle" class="sub mono">@fep/protocol/crash</text>
+  <rect class="box core" x="675" y="172" width="185" height="30" rx="6"/><text x="767" y="192" text-anchor="middle" class="sub mono">game-core/crash · events</text>
+  <rect class="box pixi" x="480" y="208" width="185" height="30" rx="6"/><text x="572" y="228" text-anchor="middle" class="sub mono">renderer/crash · curve</text>
+  <rect class="box react" x="675" y="208" width="185" height="30" rx="6"/><text x="767" y="228" text-anchor="middle" class="sub mono">hud/crash · bet slots</text>
+
+  <path class="edge" d="M230,246 L330,268" marker-end="url(#t)"/>
+  <path class="edge" d="M670,246 L570,268" marker-end="url(#t)"/>
+  <rect class="box core" x="120" y="270" width="660" height="50" rx="8"/>
+  <text x="450" y="292" text-anchor="middle" font-weight="600">Shared · gateway + session + launch · @fep/protocol common · error taxonomy · i18n · HUD basics</text>
+  <text x="450" y="310" text-anchor="middle" class="sub">balance, money strings, canonical errors, tournaments, provider mappers (one package per provider, a folder per family)</text>
+</svg>
+</div>
+<div class="grid">
+  <div class="card verdict"><h4>Family folders, not forks</h4><p>A <code>crash/</code> folder next to <code>slot/</code> in protocol, game-core, renderer, hud and each provider mapper — the "group by game family" rule already in the repo.</p></div>
+  <div class="card verdict"><h4>A game is one family</h4><p>Catalog and init carry <code>family: "slot" | "crash"</code>. A game app imports only its family's code, so bundles stay small.</p></div>
+  <div class="card verdict"><h4>Shared parts move to common</h4><p>Balance, errors, session, i18n, popups, sound, asset loading. Move a slot helper up only when crash actually needs it.</p></div>
+  <div class="card verdict"><h4>Gateway is one service</h4><p>Same <code>/v1/sessions</code>, <code>/v1/play</code>, <code>/v1/launch</code>, catalog. Crash adds one endpoint: the event stream.</p></div>
+</div>
+
+<!-- DIFF -->
+<h2 id="diff">3. How crash differs from slots</h2>
+<div class="tbl"><table>
+<tr><th>Concern</th><th>Slot</th><th>Crash</th></tr>
+<tr><td>Who drives the game</td><td>Client: <code>next</code> names the next action</td><td>Server: round phases arrive as events; client reacts</td></tr>
+<tr><td>Client ↔ gateway</td><td>HTTPS request → response</td><td>HTTPS <code>/v1/play</code> for commands + SSE <code>/v1/stream</code> for events</td></tr>
+<tr><td>Gateway ↔ provider</td><td>Request → response per spin</td><td>Long-lived upstream subscription per room + per player, plus HTTP commands</td></tr>
+<tr><td>Timing</td><td>Player-paced</td><td>Wall-clock; latency on cash-out is money</td></tr>
+<tr><td>Presentation</td><td>Present after animate (<code>events[]</code> per play)</td><td>Live; server values are final (crash point, cash-out multiplier)</td></tr>
+<tr><td>Other players</td><td>None</td><td>Live bets, cash-outs, history, top wins</td></tr>
+<tr><td>Recovery</td><td><code>resume</code> in init</td><td><code>snapshot</code> event at the start of every stream</td></tr>
+<tr><td>Same rules</td><td colspan="2">Canonical protocol only · Zod at the edge · money as strings · canonical error taxonomy · mode chosen once per session</td></tr>
+</table></div>
+
+<!-- GATEWAY -->
+<h2 id="gateway">4. Where the gateway fits</h2>
+<p>Same three modes as in the <a href="multi-provider-gateway.html#hybrid">gateway doc</a>. The crash client depends only on <code>CrashTransport</code>; which transport is created comes from launch config.</p>
+<div class="card diagram">
+<svg viewBox="0 0 900 640" role="img" aria-label="Crash transports and gateway">
+  <defs>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0L10,5L0,10z"/></marker>
+    <marker id="gl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head live" d="M0,0L10,5L0,10z"/></marker>
+  </defs>
+  <rect class="box react" x="200" y="14" width="500" height="50" rx="8"/>
+  <text x="450" y="36" text-anchor="middle" font-weight="600">Crash game client</text>
+  <text x="450" y="54" text-anchor="middle" class="sub">game-core · store · HUD · renderer — canonical types only</text>
+  <path class="edge" d="M450,64 L450,88" marker-end="url(#g)"/>
+  <rect class="box core" x="200" y="90" width="500" height="50" rx="8"/>
+  <text x="450" y="112" text-anchor="middle" font-weight="600">CrashTransport (port)</text>
+  <text x="450" y="130" text-anchor="middle" class="sub mono">init · play · subscribe · tournaments</text>
+
+  <path class="edge" d="M260,140 L130,178" marker-end="url(#g)"/>
+  <path class="edge" d="M450,140 L450,178" marker-end="url(#g)"/>
+  <path class="edge" d="M640,140 L770,178" marker-end="url(#g)"/>
+  <rect class="box" x="20" y="180" width="220" height="62" rx="8"/>
+  <text x="130" y="204" text-anchor="middle" font-weight="600">MockTransport</text>
+  <text x="130" y="224" text-anchor="middle" class="sub">replays recorded round timelines</text>
+  <rect class="box core" x="340" y="180" width="220" height="62" rx="8"/>
+  <text x="450" y="204" text-anchor="middle" font-weight="600">GatewayTransport</text>
+  <text x="450" y="224" text-anchor="middle" class="sub">HTTPS /v1/play · SSE /v1/stream</text>
+  <rect class="box warn" x="660" y="180" width="220" height="62" rx="8"/>
+  <text x="770" y="204" text-anchor="middle" font-weight="600">DirectTransport · prov A</text>
+  <text x="770" y="224" text-anchor="middle" class="sub">Game API + Mercure + mapper-A</text>
+
+  <path class="edge" d="M450,242 L450,284" marker-end="url(#g)"/>
+  <path class="edge live" d="M470,284 L470,244" marker-end="url(#gl)"/>
+  <text x="480" y="268" class="sub">events (seq)</text>
+  <path class="edge dash" d="M770,242 C770,420 820,520 790,568" marker-end="url(#g)"/>
+  <text x="836" y="410" text-anchor="end" class="sub">browser-safe only</text>
+
+  <rect class="frame" x="20" y="286" width="740" height="240" rx="12"/>
+  <text x="36" y="306" class="lbl">GAME GATEWAY · crash additions</text>
+  <rect class="box core" x="40" y="316" width="220" height="70" rx="8"/>
+  <text x="150" y="340" text-anchor="middle" font-weight="600">Canonical API</text>
+  <text x="150" y="358" text-anchor="middle" class="sub mono">/v1/sessions · /v1/play</text>
+  <text x="150" y="374" text-anchor="middle" class="sub mono">/v1/stream (SSE)</text>
+  <rect class="box core" x="280" y="316" width="220" height="70" rx="8"/>
+  <text x="390" y="340" text-anchor="middle" font-weight="600">Room hub</text>
+  <text x="390" y="358" text-anchor="middle" class="sub">fan-out per provider × game</text>
+  <text x="390" y="374" text-anchor="middle" class="sub">seq · replay buffer · snapshot</text>
+  <rect class="box core" x="520" y="316" width="220" height="70" rx="8"/>
+  <text x="630" y="340" text-anchor="middle" font-weight="600">Core (shared)</text>
+  <text x="630" y="358" text-anchor="middle" class="sub">session map · requestId</text>
+  <text x="630" y="374" text-anchor="middle" class="sub">errors · capabilities · audit</text>
+  <path class="edge" d="M260,351 L278,351" marker-end="url(#g)" marker-start="url(#g)"/>
+  <path class="edge" d="M500,351 L518,351" marker-end="url(#g)" marker-start="url(#g)"/>
+  <text x="390" y="406" text-anchor="middle" class="sub">Redis pub/sub between gateway instances</text>
+
+  <rect class="box" x="40" y="430" width="220" height="80" rx="8"/>
+  <text x="150" y="454" text-anchor="middle" font-weight="600">Connector A · crash</text>
+  <text x="150" y="472" text-anchor="middle" class="sub">Mercure: public topic once/room</text>
+  <text x="150" y="488" text-anchor="middle" class="sub">player topic per session</text>
+  <text x="150" y="504" text-anchor="middle" class="sub">holds fingerprint + token</text>
+  <rect class="box" x="280" y="430" width="220" height="80" rx="8"/>
+  <text x="390" y="454" text-anchor="middle" font-weight="600">Connector B · crash</text>
+  <text x="390" y="472" text-anchor="middle" class="sub">WebSocket, commands on same socket</text>
+  <text x="390" y="488" text-anchor="middle" class="sub">(example provider)</text>
+  <rect class="box" x="520" y="430" width="220" height="80" rx="8"/>
+  <text x="630" y="454" text-anchor="middle" font-weight="600">Connector C · crash</text>
+  <text x="630" y="472" text-anchor="middle" class="sub">REST polling of round state</text>
+  <text x="630" y="488" text-anchor="middle" class="sub">(example provider)</text>
+  <path class="edge" d="M390,386 L390,428" marker-end="url(#g)" marker-start="url(#g)"/>
+  <path class="edge" d="M300,386 L170,428" marker-end="url(#g)" marker-start="url(#g)"/>
+  <path class="edge" d="M480,386 L610,428" marker-end="url(#g)" marker-start="url(#g)"/>
+
+  <rect class="box ext" x="40" y="570" width="220" height="56" rx="8"/>
+  <text x="150" y="594" text-anchor="middle" font-weight="600">Provider A</text>
+  <text x="150" y="612" text-anchor="middle" class="sub">Game API /api/v1 + Mercure hub</text>
+  <rect class="box ext" x="280" y="570" width="220" height="56" rx="8"/>
+  <text x="390" y="598" text-anchor="middle" font-weight="600">Provider B</text>
+  <rect class="box ext" x="520" y="570" width="220" height="56" rx="8"/>
+  <text x="630" y="598" text-anchor="middle" font-weight="600">Provider C</text>
+  <path class="edge live" d="M150,568 L150,512" marker-end="url(#gl)"/>
+  <path class="edge live" d="M390,568 L390,512" marker-end="url(#gl)"/>
+  <path class="edge live" d="M630,568 L630,512" marker-end="url(#gl)"/>
+  <rect class="box ext" x="770" y="570" width="110" height="56" rx="8"/>
+  <text x="825" y="594" text-anchor="middle" font-weight="600">Prov A</text>
+  <text x="825" y="612" text-anchor="middle" class="sub">direct</text>
+</svg>
+</div>
+<div class="grid">
+  <div class="card"><h4>Room hub (new in the gateway)</h4><p>Round events are the same for every player of a game. The connector subscribes to the provider's public channel <b>once per room</b> (provider × game × table) and the hub fans out to all clients — not one upstream connection per player. Player-only events (own bet confirmed / settled) come from a per-session upstream and go only to that client.</p></div>
+  <div class="card"><h4>Ordered, resumable stream</h4><p>The hub stamps every canonical event with a per-room <code>seq</code> and <code>serverTime</code>, keeps a short replay buffer, and caches the latest room snapshot. A client reconnecting with <code>Last-Event-ID</code> gets the missed events, or a fresh <code>snapshot</code> if the gap is too old.</p></div>
+  <div class="card"><h4>Secrets stay server-side</h4><p>In gateway mode the fingerprint, <code>subscriberToken</code> and Mercure topics live in the connector's session map. The client only has our gateway token — the 112 self-lockout can't come from the browser anymore.</p></div>
+  <div class="card"><h4>What the gateway must not do</h4><p>Decide crash points, cash-out multipliers or auto cash-out. It forwards commands immediately (no queueing) and passes the provider's values through. RNG and math stay at the provider.</p></div>
+</div>
+
+<h3 id="config">Who decides SSE or WebSocket? Config at three levels</h3>
+<p>There are two separate links, and each one is decided in a different place. The game code never reads "SSE" or "WebSocket" itself.</p>
+<div class="tbl"><table>
+<tr><th>Level</th><th>Where it lives</th><th>What it decides</th><th>Example</th></tr>
+<tr><td>1 · Launch config</td><td>Returned by <code>POST /v1/launch</code> (gateway) → passed to the game in the iframe URL / <code>postMessage</code></td><td>Which <b>transport</b> the client creates: gateway, direct or mock, and for direct, which provider</td><td><pre class="shape">{ transport:<span class="c">"gateway"</span>,
+  provider:<span class="c">"prov-a"</span>,
+  gatewayUrl, token }</pre></td></tr>
+<tr><td>2 · Init <code>stream</code></td><td>Canonical init response from the gateway</td><td>How the <b>client ↔ gateway</b> stream is read. Today always <code>"sse"</code>; the field exists so a <code>"ws"</code> reader can be added later without changing the port</td><td><pre class="shape">stream: { kind:<span class="c">"sse"</span>,
+  url:<span class="c">"/v1/stream"</span> }</pre></td></tr>
+<tr><td>3 · Provider registry</td><td>Gateway database / config, per provider × game. Server-side only</td><td>How the <b>gateway ↔ provider</b> link works: which connector, its realtime kind, URLs, credentials, room key</td><td><pre class="shape">{ provider:<span class="c">"prov-a"</span>,
+  game:<span class="c">"rocket"</span>,
+  connector:<span class="c">"provider-a/crash"</span>,
+  realtime: { kind:<span class="c">"mercure"</span> },
+  apiBase, room:<span class="c">"rocket-eu"</span> }</pre></td></tr>
+</table></div>
+<div class="grid" style="margin-top:12px">
+  <div class="card verdict"><h4>Gateway mode</h4><p>Client always uses SSE to our gateway (level 2). Whether the provider behind it speaks Mercure, WebSocket or polling is level 3, so adding a WebSocket provider changes only gateway config and a connector, not the game.</p></div>
+  <div class="card"><h4>Direct mode</h4><p>Level 1 names the provider, which picks that provider's <code>DirectTransport</code> from its mapper package. The provider's own init tells it the details (for Provider A: <code>server.url</code>, topics, <code>subscriberToken</code>). Only browser-safe providers are allowed here.</p></div>
+  <div class="card"><h4>Why SSE to the gateway, not WebSocket</h4><p>Commands already go over HTTPS <code>/v1/play</code> (idempotency, same as slots), so the client only needs server → client push. SSE is plain HTTP: easier through proxies and CDNs, built-in resume with <code>Last-Event-ID</code>. Switch to <code>kind:"ws"</code> only if we ever need client → server messages on the stream.</p></div>
+</div>
+
+<!-- CANONICAL -->
+<h2 id="canonical">5. Canonical crash protocol</h2>
+<p>An extension of the <a href="multi-provider-gateway.html#protocol">canonical protocol</a>: same init and <code>/v1/play</code>, new crash actions, a crash capabilities block, and an event stream. Designed as a superset of Provider A, as for slots.</p>
+<div class="grid">
+<div class="card"><h4>Init <code>POST /v1/sessions</code> (crash part)</h4>
+<pre class="shape">{
+  <span class="k">game</span>: { id, provider, family: <span class="c">"crash"</span>, clientId },
+  <span class="k">money</span>: { balance:<span class="c">"103.00"</span>, currency, decimals },
+  <span class="k">bets</span>: { min, max, default },
+  <span class="k">capabilities</span>: { crash: {
+    lanes: 1 | 3,
+    autoCashout: { min:<span class="c">"1.01"</span> } | null,
+    curve: { kind:<span class="c">"exp"</span>, k } | { kind:<span class="c">"ticks"</span> },
+    liveBets: true,
+    betWhileRunning: <span class="c">"reject" | "nextRound"</span>,
+    freeRounds: false
+  }},
+  <span class="k">stream</span>: { kind:<span class="c">"sse"</span>, url:<span class="c">"/v1/stream"</span> },
+  <span class="k">promos</span>, <span class="k">i18n</span>
+}</pre></div>
+<div class="card"><h4>Commands <code>POST /v1/play</code></h4>
+<pre class="shape"><span class="c">// request</span>
+{ requestId:<span class="c">"uuid"</span>, action:<span class="c">"bet"</span>,
+  lane:1, bet:<span class="c">"1.00"</span>, autoCashout:<span class="c">"2.00"</span> }
+<span class="c">// action: bet | cancelBet | cashout</span>
+<span class="c">// lane always sent; connector drops it</span>
+<span class="c">// for providers without lanes</span>
+
+<span class="c">// response</span>
+{ balance:<span class="c">"102.00"</span>,
+  bet?: { roundId, lane, amount, autoCashout },
+  cashout?: { multiplier:<span class="c">"1.84"</span>, win:<span class="c">"1.84"</span> } }</pre></div>
+<div class="card"><h4>Stream <code>GET /v1/stream</code> (SSE)</h4>
+<pre class="shape"><span class="c">// every event</span>
+{ seq:1042, serverTime:1764090000123,
+  type:<span class="c">"tick"</span>, lane:1, roundId:<span class="c">"r-88"</span>,
+  multiplier:<span class="c">"1.37"</span> }
+
+<span class="c">// first event on every connect</span>
+{ seq:1000, type:<span class="c">"snapshot"</span>,
+  lanes:[…], history:[…], topWins:[…],
+  myBets:[…], balance:<span class="c">"102.00"</span> }</pre></div>
+</div>
+<div class="tbl" style="margin-top:12px"><table>
+<tr><th>Canonical event</th><th>Scope</th><th>Meaning</th><th>Provider A native (<code>crash-api.md</code>)</th></tr>
+<tr><td><code>snapshot</code></td><td>player</td><td>full state; replaces store</td><td><code>GET /crash/myStats</code> (or <code>crashInit</code>)</td></tr>
+<tr><td><code>roundStart</code></td><td>room</td><td>new <code>roundId</code> per lane</td><td><code>round_start</code></td></tr>
+<tr><td><code>countdown</code></td><td>room</td><td>betting open, <code>endsAt</code></td><td><code>countDown</code></td></tr>
+<tr><td><code>running</code></td><td>room</td><td>flight started, <code>startAt</code></td><td><code>running</code></td></tr>
+<tr><td><code>tick</code></td><td>room</td><td>authoritative multiplier</td><td><code>tick</code></td></tr>
+<tr><td><code>crash</code></td><td>room</td><td>final <code>crashPoint</code></td><td><code>crash</code></td></tr>
+<tr><td><code>history</code></td><td>room</td><td>recent results, top wins</td><td><code>stats</code></td></tr>
+<tr><td><code>betPlaced</code> / <code>betRemoved</code> / <code>betCashedOut</code></td><td>room</td><td>live bets list</td><td><code>bet_added</code> / <code>bet_removed</code> / (TBD)</td></tr>
+<tr><td><code>myBetAccepted</code></td><td>player</td><td>own bet is in the round</td><td><code>bet_ok</code></td></tr>
+<tr><td><code>myBetSettled</code></td><td>player</td><td>own result: cashed out (multiplier, win) or lost</td><td><code>my_bet_result</code></td></tr>
+<tr><td><code>balance</code></td><td>player</td><td>balance changed outside a command</td><td>— (from command responses today)</td></tr>
+</table></div>
+<div class="grid" style="margin-top:12px">
+  <div class="card"><h4>Batching for scale</h4><p>The hub may coalesce live-bet events into one <code>betsDelta</code> every ~200 ms per room. Tick and phase events are never batched.</p></div>
+  <div class="card"><h4>Unknown events</h4><p>Client logs and skips unknown <code>type</code>s, as the slot event player does. Provider-specific extras travel in <code>ext</code>.</p></div>
+  <div class="card"><h4>Errors</h4><p>Canonical taxonomy from the gateway doc, plus crash codes: <code>BETTING_CLOSED</code>, <code>ROUND_CRASHED</code> (cash-out too late), <code>NO_ACTIVE_BET</code>, <code>ALREADY_CASHED_OUT</code>. Connector maps native codes.</p></div>
+</div>
+
+<!-- PROVIDERS -->
+<h2 id="providers">6. Same game, different providers</h2>
+<p>As with <a href="multi-provider-gateway.html#fruitstorm">Fruit Storm</a>: one client build (<code>clientId</code>), several catalog entries. The provider supplies the round, the math and the money; we supply the client.</p>
+<div class="grid">
+<div class="card"><h4>Catalog</h4>
+<pre class="shape">[
+  { id:<span class="c">"prov-a:rocket"</span>, provider:<span class="c">"prov-a"</span>,
+    family:<span class="c">"crash"</span>, clientId:<span class="c">"crash-rocket"</span> },
+  { id:<span class="c">"prov-b:rocket-x"</span>, provider:<span class="c">"prov-b"</span>,
+    family:<span class="c">"crash"</span>, clientId:<span class="c">"crash-rocket"</span> }
+]</pre>
+<p style="margin-top:8px">Launch returns the same game URL; the gateway token says which provider and room is behind it.</p></div>
+<div class="card"><h4>What each mapper absorbs</h4><ul>
+  <li>Realtime channel: Mercure / WebSocket / polling</li>
+  <li>Auth: subscriber tokens, HMAC, fingerprints</li>
+  <li>Event names and shapes → canonical events</li>
+  <li>Money: decimal strings vs integer cents</li>
+  <li>Lanes: keyed objects, arrays, or none</li>
+  <li>Cash-out style: "cash out now" vs "cash out at m"</li>
+  <li>Native error codes → canonical errors</li>
+</ul></div>
+<div class="card"><h4>What capabilities express</h4><ul>
+  <li><code>lanes</code> 1 or 3 → HUD shows 1 or 3 bet slots</li>
+  <li><code>autoCashout</code> missing → hide the field</li>
+  <li><code>curve</code> formula or ticks-only</li>
+  <li><code>liveBets: false</code> → hide the live list</li>
+  <li><code>betWhileRunning</code> → "next round" button or disabled</li>
+</ul></div>
+</div>
+<div class="tbl" style="margin-top:12px"><table>
+<tr><th>Canonical</th><th>Provider A (Game API + Mercure)</th><th>Provider B (example, WebSocket)</th></tr>
+<tr><td>subscribe</td><td>Mercure <code>publicTopic</code> + <code>playerTopic</code>, Bearer <code>subscriberToken</code></td><td><code>wss://…/crash?token=</code>, one socket</td></tr>
+<tr><td><code>play {action:"bet"}</code></td><td><code>POST /crash/bet { bet, autoCashout, fingerprint, lane? }</code></td><td><code>{"op":"place","stake":100,"target":200}</code> on the socket</td></tr>
+<tr><td><code>play {action:"cashout"}</code></td><td><code>POST /crash/push</code></td><td><code>{"op":"collect"}</code></td></tr>
+<tr><td><code>tick.multiplier</code></td><td><code>tick.multiplier</code></td><td><code>m</code> × 100 integer → <code>"1.37"</code></td></tr>
+<tr><td><code>snapshot</code></td><td><code>GET /crash/myStats</code>, lanes keyed <code>"1".."3"</code></td><td>first <code>state</code> message on the socket</td></tr>
+</table></div>
+<div class="card note"><h4>When it is NOT the same game</h4><p>Same client only if the mechanic matches: one rising multiplier per lane, bet in countdown, cash out while running. A provider with different rules (multi-step cash-out, betting on ranges, different visual concept) gets its own <code>clientId</code>, even with a similar name. Also confirm certification allows our client on that provider's math in each market.</p></div>
+
+<!-- RUNTIME -->
+<h2 id="runtime">7. Client runtime layers</h2>
+<p>React and Pixi never touch the network. game-core holds one <code>CrashTransport</code> and never knows the mode or the provider.</p>
+<div class="card diagram">
+<svg viewBox="0 0 900 470" role="img" aria-label="Crash client runtime layers">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0L10,5L0,10z"/></marker>
+    <marker id="al" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head live" d="M0,0L10,5L0,10z"/></marker>
+  </defs>
+  <rect class="box react" x="20" y="20" width="190" height="70" rx="8"/>
+  <text x="115" y="50" text-anchor="middle" font-weight="600">Lobby app</text>
+  <text x="115" y="70" text-anchor="middle" class="sub">launch → gateway token</text>
+  <path class="edge" d="M210,55 L258,55" marker-end="url(#a)"/>
+  <text x="234" y="45" text-anchor="middle" class="sub">iframe</text>
+
+  <rect class="frame" x="260" y="14" width="620" height="440" rx="12"/>
+  <text x="276" y="36" class="lbl">CRASH GAME APP · apps/games/&lt;crash-client&gt;</text>
+
+  <rect class="box react" x="290" y="54" width="270" height="100" rx="8"/>
+  <text x="425" y="80" text-anchor="middle" font-weight="600">HUD · React</text>
+  <text x="425" y="100" text-anchor="middle" class="sub">bet slot per lane · auto cash-out</text>
+  <text x="425" y="116" text-anchor="middle" class="sub">Bet / Cancel / Cash out button</text>
+  <text x="425" y="132" text-anchor="middle" class="sub">live bets · history · top wins</text>
+
+  <rect class="box pixi" x="580" y="54" width="280" height="100" rx="8"/>
+  <text x="720" y="80" text-anchor="middle" font-weight="600">Renderer · PixiJS v8</text>
+  <text x="720" y="100" text-anchor="middle" class="sub">multiplier curve · object · countdown</text>
+  <text x="720" y="116" text-anchor="middle" class="sub">crash effect · cash-out markers</text>
+  <text x="720" y="132" text-anchor="middle" class="sub">reads clock every frame (ticker)</text>
+
+  <rect class="box core" x="290" y="192" width="570" height="64" rx="8"/>
+  <text x="575" y="218" text-anchor="middle" font-weight="600">Store · Zustand</text>
+  <text x="575" y="238" text-anchor="middle" class="sub">lanes[1..3]: round, myBet · bets · history · balance · connection</text>
+  <path class="edge" d="M425,154 L425,190" marker-end="url(#a)" marker-start="url(#a)"/>
+  <text x="433" y="176" class="sub">select / intent</text>
+  <path class="edge" d="M720,190 L720,154" marker-end="url(#a)"/>
+  <text x="728" y="176" class="sub">subscribe (no re-render)</text>
+
+  <rect class="box core" x="290" y="294" width="570" height="64" rx="8"/>
+  <text x="575" y="320" text-anchor="middle" font-weight="600">game-core · crash session</text>
+  <text x="575" y="340" text-anchor="middle" class="sub">event reducer · intents bet/cancel/cashout · clock offset · error policy</text>
+  <path class="edge" d="M575,292 L575,258" marker-end="url(#a)"/>
+
+  <rect class="box core" x="290" y="392" width="570" height="48" rx="8"/>
+  <text x="575" y="414" text-anchor="middle" font-weight="600">CrashTransport</text>
+  <text x="575" y="430" text-anchor="middle" class="sub">gateway · direct (prov A) · mock — picked once from launch config</text>
+  <path class="edge" d="M480,358 L480,390" marker-end="url(#a)"/>
+  <text x="472" y="380" text-anchor="end" class="sub">play</text>
+  <path class="edge live" d="M670,390 L670,360" marker-end="url(#al)"/>
+  <text x="678" y="380" class="sub">canonical events</text>
+</svg>
+</div>
+
+<!-- CONNECT -->
+<h2 id="connect">8. Connect &amp; resync</h2>
+<p>game-core sees the same thing in every mode: a stream whose first event is <code>snapshot</code>, followed by ordered events. Who builds that guarantee depends on the transport.</p>
+<div class="grid">
+  <div class="card verdict"><h4>Gateway mode</h4><ul>
+    <li><code>POST /v1/sessions</code> → token, capabilities</li>
+    <li>Open <code>/v1/stream</code> with <code>Authorization</code> (fetch-based SSE reader)</li>
+    <li>Hub sends <code>snapshot</code> then live events with <code>seq</code></li>
+    <li>Reconnect with <code>Last-Event-ID</code>; hub replays or re-snapshots</li>
+  </ul></div>
+  <div class="card"><h4>Direct mode (prov A, phase 0)</h4><ul>
+    <li><code>GET /game/{sessionKey}</code> once (fingerprint rotates)</li>
+    <li>Open Mercure with both topics on one connection, buffer events</li>
+    <li><code>GET /crash/myStats</code> → mapper → synthetic <code>snapshot</code></li>
+    <li>Replay buffer, dropping events older than the snapshot</li>
+    <li>On reconnect: repeat the last three steps — never re-init (112)</li>
+  </ul></div>
+  <div class="card"><h4>Mock mode</h4><ul>
+    <li>Recorded timeline from the gateway audit log</li>
+    <li>Fake clock; tests drive countdown → crash in milliseconds</li>
+  </ul></div>
+</div>
+<div class="grid" style="margin-top:12px">
+  <div class="card"><h4>Why not native EventSource</h4><p>Both our gateway stream and Mercure want an <code>Authorization</code> header, which <code>EventSource</code> can't send. Use <code>fetch</code> + <code>ReadableStream</code> with a small SSE parser, or <code>@microsoft/fetch-event-source</code>.</p></div>
+  <div class="card"><h4>Background tabs</h4><p>On <code>visibilitychange</code> → visible, reconnect and take the fresh snapshot instead of trusting stale state. Pause the Pixi ticker while hidden.</p></div>
+  <div class="card"><h4>Connection status</h4><p><code>connecting · live · reconnecting · offline</code> in the store. Bet and Cash out are disabled unless <code>live</code>; a drop mid-round shows a banner, never a guessed result.</p></div>
+</div>
+
+<!-- ROUND -->
+<h2 id="round">9. Round lifecycle (per lane)</h2>
+<p>A pure reducer in game-core: <code>(state, canonicalEvent) → state</code>. Provider phase names never reach it.</p>
+<div class="card diagram">
+<svg viewBox="0 0 900 230" role="img" aria-label="Crash round state machine">
+  <defs><marker id="r" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="head" d="M0,0L10,5L0,10z"/></marker></defs>
+  <rect class="box core" x="20" y="30" width="180" height="96" rx="8"/><text x="110" y="56" text-anchor="middle" font-weight="600">Starting</text><text x="110" y="76" text-anchor="middle" class="sub mono">roundStart</text><text x="110" y="96" text-anchor="middle" class="sub">new roundId, reset lane</text><text x="110" y="112" text-anchor="middle" class="sub">clear settled myBet</text>
+  <path class="edge" d="M200,78 L238,78" marker-end="url(#r)"/>
+  <rect class="box react" x="240" y="30" width="190" height="96" rx="8"/><text x="335" y="56" text-anchor="middle" font-weight="600">Countdown</text><text x="335" y="76" text-anchor="middle" class="sub mono">countdown</text><text x="335" y="96" text-anchor="middle" class="sub">betting open</text><text x="335" y="112" text-anchor="middle" class="sub">bet · cancelBet</text>
+  <path class="edge" d="M430,78 L468,78" marker-end="url(#r)"/>
+  <rect class="box pixi" x="470" y="30" width="190" height="96" rx="8"/><text x="565" y="56" text-anchor="middle" font-weight="600">Running</text><text x="565" y="76" text-anchor="middle" class="sub mono">running · tick</text><text x="565" y="96" text-anchor="middle" class="sub">multiplier rises</text><text x="565" y="112" text-anchor="middle" class="sub">cashout · auto cash-out</text>
+  <path class="edge" d="M660,78 L698,78" marker-end="url(#r)"/>
+  <rect class="box bad" x="700" y="30" width="180" height="96" rx="8"/><text x="790" y="56" text-anchor="middle" font-weight="600">Crashed</text><text x="790" y="76" text-anchor="middle" class="sub mono">crash · history</text><text x="790" y="96" text-anchor="middle" class="sub">crashPoint final</text><text x="790" y="112" text-anchor="middle" class="sub">myBetSettled</text>
+  <path class="edge dash" d="M790,126 C790,200 110,200 110,130" marker-end="url(#r)"/>
+  <text x="450" y="190" text-anchor="middle" class="sub">next roundStart</text>
+</svg>
+</div>
+
+<!-- STORE -->
+<h2 id="store">10. Store shape</h2>
+<div class="grid">
+<div class="card"><pre class="shape"><span class="k">type</span> LaneId = 1 | 2 | 3;
+
+<span class="k">interface</span> CrashState {
+  connection: <span class="c">"connecting" | "live" | "reconnecting" | "offline"</span>;
+  capabilities: CrashCapabilities;
+  lanes: Record&lt;LaneId, LaneState&gt;;  <span class="c">// lanes: 1 → only lane 1</span>
+  history: RoundResult[];
+  topWins: Bet[];
+  myBets: MyBetRecord[];
+  balance: string;
+  lastSeq: number;
+  clockOffsetMs: number;              <span class="c">// from serverTime</span>
+}
+
+<span class="k">interface</span> LaneState {
+  roundId: string;
+  phase: <span class="c">"starting" | "countdown" | "running" | "crashed"</span>;
+  startAt: number | null;
+  serverMultiplier: string;           <span class="c">// last tick</span>
+  crashPoint: string | null;
+  myBet: MyBet | null;
+  pending: <span class="c">"bet" | "cancel" | "cashout" | null</span>;
+  bets: Bet[];
+}</pre></div>
+<div class="card"><h4>Rules</h4><ul>
+  <li><code>snapshot</code> replaces the whole state; other events patch it. Same reducer in tests.</li>
+  <li>Ignore events with <code>seq ≤ lastSeq</code> (duplicates after reconnect).</li>
+  <li><code>pending</code> blocks double clicks; cleared by the <code>/v1/play</code> response or its error.</li>
+  <li>Command responses and player events can both carry balance: last <code>serverTime</code> wins.</li>
+  <li>The Pixi ticker reads <code>serverMultiplier</code> via <code>store.getState()</code>, not a hook.</li>
+  <li>Live-bet events are flushed into the store once per animation frame; the list is virtualized.</li>
+</ul></div>
+</div>
+
+<!-- RENDER -->
+<h2 id="render">11. Rendering the multiplier</h2>
+<div class="grid">
+  <div class="card verdict"><h4>Curve from capabilities</h4><p>With <code>curve.kind = "exp"</code>, compute <code>m = e<sup>k·t</sup></code> each frame from <code>now + clockOffsetMs − startAt</code>; ticks only correct drift. Each provider's formula arrives through capabilities, so the client has none hard-coded.</p></div>
+  <div class="card"><h4>Ticks only</h4><p>When a provider gives no formula: render one tick behind and tween between the last two. Never extrapolate past the latest tick.</p></div>
+  <div class="card"><h4>Crash wins</h4><p>On <code>crash</code>, snap to <code>crashPoint</code> and play the effect at once, even mid-tween.</p></div>
+  <div class="card"><h4>Clock offset</h4><p>Every canonical event has <code>serverTime</code>, so the offset is a running estimate — no separate time endpoint. In Direct mode, use the HTTP <code>Date</code> header until Provider A adds a timestamp.</p></div>
+</div>
+
+<!-- ACTIONS -->
+<h2 id="actions">12. Bet, cancel, cash out</h2>
+<div class="tbl"><table>
+<tr><th>Intent</th><th>Canonical</th><th>Allowed in</th><th>On success</th><th>Notes</th></tr>
+<tr><td>Bet</td><td><code>play {action:"bet", lane, bet, autoCashout?}</code></td><td>Countdown</td><td>apply <code>balance</code>; slot "waiting" until <code>myBetAccepted</code></td><td><code>autoCashout</code> ≥ <code>capabilities.crash.autoCashout.min</code></td></tr>
+<tr><td>Cancel</td><td><code>play {action:"cancelBet", lane}</code></td><td>Countdown</td><td>apply <code>balance</code>; <code>myBet = null</code></td><td>Disabled once <code>running</code> arrives</td></tr>
+<tr><td>Cash out</td><td><code>play {action:"cashout", lane}</code></td><td>Running, own bet active</td><td>apply <code>cashout.multiplier</code>, <code>win</code>, <code>balance</code></td><td>Server multiplier is final, not the on-screen one</td></tr>
+</table></div>
+<div class="grid" style="margin-top:12px">
+  <div class="card"><h4>Cash-out latency</h4><p>The gateway adds a hop (~10–30 ms in-region). For crash that hop costs the player multiplier, so the gateway runs in the provider's region, forwards <code>cashout</code> without queueing, and logs end-to-end latency per provider. Show the pending state on press; never show a win before the response.</p></div>
+  <div class="card"><h4>Idempotency</h4><p><code>requestId</code> on every command. A retried <code>cashout</code> after a timeout must not double-settle: the gateway returns the first result for the same <code>requestId</code>.</p></div>
+  <div class="card"><h4>Auto cash-out</h4><p>Done by the provider. The client only shows the target on the curve and waits for <code>myBetSettled</code>. Never fire <code>cashout</code> locally when the curve passes the target.</p></div>
+</div>
+
+<!-- LANES -->
+<h2 id="lanes">13. Lanes</h2>
+<div class="grid">
+  <div class="card"><h4>One model</h4><p>Everything is <code>lanes[LaneId]</code>; <code>capabilities.crash.lanes</code> says how many. A provider without lanes is a 1-lane game. HUD and renderer never branch on provider.</p></div>
+  <div class="card"><h4>Lane in every command</h4><p>Canonical commands always carry <code>lane</code>. Mapper-A drops it for Provider A's non-lane games (the API says omit it there).</p></div>
+  <div class="card"><h4>Rendering</h4><p>Each lane is a curve/object in one Pixi scene, not separate canvases. The layout for 1 vs 3 lanes lives in the game app.</p></div>
+</div>
+
+<!-- REPO -->
+<h2 id="repo">14. Where the code goes</h2>
+<div class="grid">
+<div class="card"><pre class="shape"><span class="k">packages/protocol/src/crash/</span>       <span class="c">→ @fep/protocol/crash</span>
+  schemas/   canonical: init, command, events (union)
+  types/     crash-transport.type.ts (the port), …
+  transport/ create-gateway-crash-transport.ts
+             create-mock-crash-transport.ts
+  utils/     parse-sse.ts  <span class="c">shared by gateway + direct</span>
+<span class="k">packages/mappers/provider-a/src/crash/</span>  <span class="c">pure</span>
+  schemas/   native: my-stats, mercure events, push
+  utils/     to-canonical-event.ts, to-snapshot.ts,
+             to-native-command.ts
+  transport/ create-direct-crash-transport.ts
+<span class="k">packages/game-core/src/crash/</span>  reducer, session
+<span class="k">packages/renderer/src/crash/</span>   curve, crash fx
+<span class="k">packages/hud/src/crash/</span>        bet slots, lists
+<span class="k">apps/games/&lt;crash-client&gt;/</span>    art, lane layout
+<span class="c">gateway (separate repo/service)</span>
+  connectors/provider-a/crash  uses mapper-A</pre></div>
+<div class="card"><h4>The port</h4>
+<pre class="shape"><span class="k">interface</span> CrashTransport {
+  init(launch: LaunchParams): Promise&lt;CrashInit&gt;;
+  play(cmd: CrashCommand): Promise&lt;CrashCommandResult&gt;;
+  <span class="c">// first event is always "snapshot"</span>
+  subscribe(handlers: {
+    onEvent(e: CrashEvent): void;
+    onStatus(s: ConnectionStatus): void;
+  }): () =&gt; void;
+  tournaments(): Promise&lt;Tournament[]&gt;;
+}</pre>
+<p style="margin-top:8px">Sits beside the slot transport. Takes and returns canonical types only; game-core imports nothing provider-specific.</p></div>
+</div>
+<div class="card"><h4>Workspace chores</h4><ul>
+  <li>Add <code>"./crash"</code> to <code>@fep/protocol</code> exports next to <code>"./slot"</code>. Slot code stays untouched.</li>
+  <li><code>packages/mappers/*</code> are <code>type:protocol</code>-level: pure, no fetch except in their <code>transport/</code> (Direct only).</li>
+  <li>New app → <code>nx.tags</code> + commitlint scope. Mapper tests use the JSON in <code>docs/crash-api.md</code> once full payloads exist.</li>
+</ul></div>
+
+<!-- PHASES -->
+<h2 id="phases">15. Phases (aligned with the gateway roadmap)</h2>
+<div class="tbl"><table>
+<tr><th>Phase</th><th>Crash work</th></tr>
+<tr><td>0 · Port</td><td>Canonical crash schemas + <code>CrashTransport</code>. Mapper-A crash + <code>DirectTransport</code> (browser talks to Game API + Mercure). Mock transport. Ship the first crash client.</td></tr>
+<tr><td>1 · Gateway</td><td>Connector A crash + room hub + <code>/v1/stream</code>. Flip launch config to gateway — no client change.</td></tr>
+<tr><td>2 · Second provider</td><td>Connector B (e.g. WebSocket) + its mapper; catalog entry with the same <code>clientId</code>.</td></tr>
+<tr><td>3 · Hardening</td><td>Latency dashboards per provider, live-bet batching, replay tooling from audit log, cross-provider tournaments on crash wins.</td></tr>
+</table></div>
+
+<!-- RISKS -->
+<h2 id="risks">16. Risks &amp; open questions</h2>
+<div class="tbl"><table class="risk">
+<tr><th>Item</th><th>Why it matters</th><th>Proposed answer</th></tr>
+<tr><td>Full Provider A payloads</td><td><code>crash-api.md</code> lists event types, not fields.</td><td>One JSON example per <code>type</code>, lane and non-lane.</td></tr>
+<tr><td>Public topic auth</td><td>Room hub wants one upstream per room; Provider A's token is per player.</td><td>Ask whether <code>publicTopic</code> is readable without a player token, or a service token exists.</td></tr>
+<tr><td>Multiplier formula</td><td>Smooth curve needs it.</td><td>Ask Provider A for <code>m(t)</code>; carry it in <code>capabilities.crash.curve</code>.</td></tr>
+<tr><td>Cash-out latency via gateway</td><td>Extra hop = lower multiplier; players notice.</td><td>Co-locate gateway with provider; measure; keep Direct as an emergency fallback for Provider A.</td></tr>
+<tr><td>Fan-out scale</td><td>Thousands of SSE clients per room, tick bursts.</td><td>Redis pub/sub, batched live bets, HTTP/2 for SSE, load test before launch.</td></tr>
+<tr><td>Token expiry</td><td>Long sessions: <code>subscriberToken</code> (direct) or gateway token expires.</td><td>Gateway renews upstream itself; client token refresh via existing session endpoint.</td></tr>
+<tr><td>Others' cash-outs</td><td>No <code>betCashedOut</code> equivalent seen in Provider A.</td><td>Confirm whether <code>bet_added</code> updates carry cash-outs.</td></tr>
+<tr><td>Bet during running</td><td>"Next round" UX.</td><td>Per provider via <code>betWhileRunning</code>.</td></tr>
+<tr><td>Proxies buffering SSE</td><td>Stream stalls.</td><td><code>X-Accel-Buffering: no</code>, heartbeat comment every 15 s, CORS allows <code>Authorization</code>.</td></tr>
+<tr><td>Certification</td><td>Our client on another provider's math.</td><td>Check per market before adding a second catalog entry.</td></tr>
+</table></div>
+
+<footer>Sources: <code>docs/crash-api.md</code> (Provider A native), <a href="multi-provider-gateway.html">multi-provider gateway</a>. Related: <a href="frontend-architecture.html">client architecture</a> · <a href="index.html">Game Front API</a>.</footer>
+</main>
+</body>
+</html>
