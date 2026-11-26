@@ -43,6 +43,9 @@ app.stage.addChild(lane1.view); // lane games: one view per lane, placed by the 
   crashed caption, the player's cash-out marker. Placeholder look until per-game art exists. Not unit tested (needs
   WebGL).
 
+Pixi scene files (`*-scene.ts`, `scene/`) are excluded from coverage: they need WebGL and are checked in the browser
+(`bun run serve:gameone`, `bun run serve:crashone`). Keep logic out of them so it stays covered.
+
 ```sh
 bun nx test renderer --coverage
 ```
