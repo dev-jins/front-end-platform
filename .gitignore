@@ -52,3 +52,6 @@ Thumbs.db
 test-output
 vite.config.*.timestamp*
 vitest.config.*.timestamp*
+
+# local env overrides
+.env*.local
