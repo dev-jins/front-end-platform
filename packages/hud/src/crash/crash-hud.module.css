@@ -1,0 +1,154 @@
+.hud {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    background: linear-gradient(transparent, rgb(0 0 0 / 75%));
+    color: #f8fafc;
+    font-family: system-ui, sans-serif;
+}
+
+.top {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.stat {
+    display: grid;
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
+}
+
+.label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.7;
+}
+
+.history {
+    display: flex;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow-x: auto;
+    font-variant-numeric: tabular-nums;
+}
+
+.history li {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #334155;
+    font-size: 13px;
+}
+
+.history .high {
+    background: #166534;
+}
+
+.banner {
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: #92400e;
+    font-size: 14px;
+}
+
+.slots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+}
+
+.slot {
+    display: grid;
+    gap: 8px;
+    min-width: 240px;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgb(15 23 42 / 85%);
+}
+
+.slot label {
+    display: grid;
+    gap: 4px;
+    font-size: 12px;
+}
+
+.slot input[type="text"] {
+    padding: 8px 10px;
+    border: 1px solid #475569;
+    border-radius: 8px;
+    background: #0f172a;
+    color: inherit;
+    font: inherit;
+    font-size: 16px;
+}
+
+.slot .check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.slot button {
+    padding: 12px 16px;
+    border: 0;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    background: #22c55e;
+    color: #052e16;
+}
+
+.slot button.cancel {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.slot button.cashout {
+    background: #f59e0b;
+    color: #451a03;
+}
+
+.slot button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.slot button:focus-visible,
+.slot input:focus-visible {
+    outline: 3px solid #fde047;
+    outline-offset: 2px;
+}
+
+.bets {
+    display: grid;
+    gap: 4px;
+    max-height: 160px;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.bets li {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 12px;
+}
+
+.won {
+    color: #4ade80;
+}
