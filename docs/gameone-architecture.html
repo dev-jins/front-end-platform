@@ -93,7 +93,8 @@ footer{margin-top:48px;color:var(--ink-2);font-size:13px}
 <p class="lead">
 How <code>apps/games/gameone</code>, the reference slot client, works today: from the launch URL to reels landing on
 screen, every package it pulls in, the request → present → commit loop, and what is still a placeholder. This describes
-the code as of 2026-11-26. The client-wide design is in <a href="frontend-architecture.html">frontend-architecture.html</a>;
+the code as of 2026-11-26, including the fixes in PR #15 (no mock in production) and PR #16 (bonus and jackpot
+dialogs). The client-wide design is in <a href="frontend-architecture.html">frontend-architecture.html</a>;
 the Game Front API is in <a href="index.html">index.html</a> and <a href="Test%20Game%20Front%20API.md">Test Game Front API.md</a>.
 The crash counterpart is <a href="crashone-architecture.html">crashone-architecture.html</a>.
 </p>
@@ -151,8 +152,8 @@ and win on screen never run ahead of the reels.
 
   <rect class="box react" x="40" y="130" width="420" height="84" rx="8"/>
   <text x="60" y="156">@fep/hud/slot — SlotHud <tspan class="sub">(React, #root)</tspan></text>
-  <text x="60" y="176" class="sub">balance · win · bet − / + · Spin · Buy bonus (opt-in)</text>
-  <text x="60" y="194" class="sub">error Dialog · tournament start / winner popups</text>
+  <text x="60" y="176" class="sub">balance · win · bet − / + · Spin · Buy bonus (opt-in) · StepDialog</text>
+  <text x="60" y="194" class="sub">dialogs: error · tournament popups · bonus / jackpot steps</text>
 
   <rect class="box pixi" x="540" y="130" width="420" height="84" rx="8"/>
   <text x="560" y="156">@fep/renderer/slot — createSlotScene <tspan class="sub">(Pixi, #game)</tspan></text>
@@ -186,7 +187,7 @@ and win on screen never run ahead of the reels.
   <text x="310" y="566" text-anchor="middle" class="sub">VITE_API_URL + ?sessionKey=</text>
   <rect class="box" x="530" y="520" width="320" height="64" rx="8"/>
   <text x="690" y="546" text-anchor="middle">createMockTransport</text>
-  <text x="690" y="566" text-anchor="middle" class="sub">app dev/ · anything else</text>
+  <text x="690" y="566" text-anchor="middle" class="sub">app dev/ · dev build without ?sessionKey=</text>
   <path class="edge" d="M440,474 L330,518" marker-end="url(#b1)"/>
   <path class="edge" d="M560,474 L670,518" marker-end="url(#b1)"/>
 
@@ -296,28 +297,35 @@ so the HUD shows "Loading…" while init is in flight.
     <code>sceneReady</code> promise, so that spin waits for the scene instead of failing.</li>
   <li><strong>Layout:</strong> the scene is scaled down (never up) to fit the screen minus <code>HUD_HEIGHT = 140</code>
     px and centred above the HUD, recalculated on renderer resize.</li>
-  <li><strong>Boot failure</strong> isn't caught in <code>main.tsx</code>: a rejected <code>bootGame</code> leaves a blank
-    page (see <a href="#gaps">gaps</a>).</li>
+  <li><strong>Launch config is checked first</strong>, before Pixi starts, so a bad launch fails at once.</li>
+  <li><strong>Boot failure</strong> (bad launch config, Pixi init) rejects <code>bootGame</code>; <code>main.tsx</code>
+    renders the message in a <code>role="alert"</code> paragraph instead of the HUD.</li>
 </ul>
 </div>
 
 <!-- ============================================================ -->
 <h2 id="launch">4. Launch &amp; transports</h2>
 <div class="tbl"><table>
-<tr><th>Condition</th><th>Transport</th><th>Session key</th></tr>
-<tr><td><code>VITE_API_URL</code> set <em>and</em> <code>?sessionKey=</code> in the URL</td>
-  <td><code>createSlotHttpTransport({baseUrl, sessionKey})</code>, a fresh one per key</td><td>from the URL</td></tr>
-<tr><td>anything else</td><td><code>createMockTransport()</code> (one shared instance)</td><td><code>"mock"</code></td></tr>
+<tr><th>URL</th><th>Needs</th><th>Transport</th></tr>
+<tr><td><code>?sessionKey=…</code></td><td><code>VITE_API_URL</code> (throws without it)</td>
+  <td><code>createSlotHttpTransport({baseUrl, sessionKey})</code>, a fresh one per key</td></tr>
+<tr><td>nothing</td><td>a dev build</td><td><code>createMockTransport()</code> (one shared instance), session key <code>"mock"</code></td></tr>
+<tr><td>nothing, production build</td><td></td><td>throws "open the game from the lobby"</td></tr>
 </table></div>
+<p>
+<code>readLaunchConfig(location.search, VITE_API_URL, import.meta.env.DEV)</code>
+(<code>src/launch/read-launch-config.ts</code>) decides, with the same rules as Crash One. It returns the API URL and
+session key, or <code>null</code> for the mock.
+</p>
 <p>
 <code>createTransport</code> is a <em>factory</em> (<code>sessionKey → SlotTransport</code>) rather than one transport,
 because operator free spins can hand the game over to a new session mid-play (<code>externalFreespins.nextSessionKey</code>,
 <a href="#special">§15</a>).
 </p>
-<div class="card bad-card">
-<strong>Unlike Crash One</strong>, Game One doesn't check <code>import.meta.env.DEV</code>: a production build opened
-without a <code>sessionKey</code> (or without <code>VITE_API_URL</code>) silently runs the mock with a fake $10,000
-balance. Crash One throws "open the game from the lobby" in that case.
+<div class="card note-card">
+<strong>Why the dev check matters:</strong> before PR #15 a production build opened without a <code>sessionKey</code>
+silently ran the mock with a fake $10,000 balance. Now only a dev build can reach the mock, so a production build can
+never show fake money.
 </div>
 
 <!-- ============================================================ -->
@@ -411,7 +419,8 @@ tournamentStartPopup   <span class="c">sticky until dismissed</span>
 tournamentWinnerPopup  <span class="c">sticky until dismissed</span>
 <span class="k">error</span>       SessionError | null
 
-<span class="c">Round&lt;S&gt; = { state: S, nextStep, mode, totalWin }</span></pre>
+<span class="c">Round&lt;S&gt; = { state: S, nextStep, mode, totalWin,</span>
+<span class="c">            jackpotState? }  open jackpot field</span></pre>
 </div>
 <div class="card">
 <h3 style="margin-top:0">Why it's shaped like this</h3>
@@ -547,6 +556,8 @@ plus the four fields the loop needs (<code>nextStep</code>, <code>mode</code>, <
 </p>
 <ul style="margin-bottom:0">
   <li>Game One uses <code>standardStateAdapter</code> (<code>gameStateSchema</code>), so <code>S = GameState</code>.</li>
+  <li>The adapter also fills the optional <code>Round.jackpotState</code> when the step has an open jackpot field, so
+    the HUD can draw the field without knowing the game's state shape.</li>
   <li>The same adapter parses both init <code>lastSpin</code> and every action response; the wrapper fields
     (balance, popups, external free spins) are parsed separately by <code>actionWrapperSchema</code>.</li>
   <li>A variant game would add <code>apps/games/&lt;sysname&gt;/src/…-state-adapter.ts</code> with its own schema; the
@@ -616,7 +627,7 @@ in yellow); no atlases, Spine, big-win timeline or landing bounce yet. Win lines
   <li><strong>Buy bonus</strong> appears only with <code>buyFeature</code> (off for Game One): <code>/buy</code> on a game
     that doesn't sell it ends the session with 102. Price = <code>percentOf(totalBet, bonusCoefficient)</code>.</li>
   <li><strong>Dialogs</strong>, one at a time by priority: error ("Session over" + Reload, or "Notice" + OK) → tournament
-    start popup → tournament winner popup.</li>
+    start popup → tournament winner popup → <code>StepDialog</code> for steps that wait for the player (§15).</li>
   <li><strong>Money</strong>: <code>formatMoney</code> with <code>currencyData.currency</code>, <code>rounding</code> and
     the init locale; amounts never pass through floats (BigInt on scaled units + Intl string input).</li>
   <li><span class="pill warn">i18n</span> strings are inline English until <code>packages/i18n</code> lands.</li>
@@ -647,9 +658,18 @@ player. The scene shows <code>lastSpin</code> at rest first.</p>
 </div>
 <div class="card">
 <h3 style="margin-top:0">Bonus &amp; jackpot</h3>
-<p style="margin:0">The session supports <code>bonus(variant)</code>, <code>openFieldItem</code> and <code>next()</code>,
-but <span class="pill warn">no UI calls them yet</span>: if Game One's server ever returns those steps, the HUD has no
-button for them and stays locked.</p>
+<p style="margin:0"><code>StepDialog</code> (<code>packages/hud/src/slot/step-dialog.tsx</code>) handles the steps
+that wait for the player:</p>
+<ul style="margin:6px 0 0">
+  <li><code>bonus</code>: "Choose your bonus", one button per <code>bonusParameters</code> variant →
+    <code>bonus(variant)</code>.</li>
+  <li><code>jackpot</code> with an open field: a <code>cols × rows</code> grid; opened cells show their item and are
+    locked, closed ones call <code>openFieldItem(col, row)</code>. With no field, or a finished one: Continue →
+    <code>next()</code> (<code>/jackpot</code>).</li>
+  <li><code>getPreviousState</code>: "Bonus complete" + Continue → <code>next()</code>.</li>
+</ul>
+<p style="margin:6px 0 0">The dialog stays open with its buttons disabled while the request runs. Plain buttons for now;
+a game's own bonus or jackpot screen can replace it.</p>
 </div>
 </div>
 
@@ -661,7 +681,7 @@ button for them and stays locked.</p>
 <tr><td>Who drives time</td><td>the client, step by step (<code>nextStep</code>)</td><td>the server's round clock, for everyone</td></tr>
 <tr><td>Presenting</td><td>result held in <code>pending</code> until reels land</td><td>applied as events arrive; curve drawn from server time</td></tr>
 <tr><td>Network failure on an action</td><td>CRITICAL (no idempotency)</td><td>ALERT (<code>requestId</code> makes retry safe)</td></tr>
-<tr><td>Transport choice</td><td>HTTP if <code>VITE_API_URL</code> + key, else mock</td><td>gateway / direct / mock, mock only in dev</td></tr>
+<tr><td>Transport choice</td><td>HTTP with <code>?sessionKey=</code>, mock only in dev</td><td>gateway / direct / mock, mock only in dev</td></tr>
 <tr><td>State variants</td><td>per-game <code>StateAdapter</code></td><td>per-provider mapper or gateway connector</td></tr>
 <tr><td>Fingerprint</td><td>held by the session</td><td>held by the direct transport (Provider A only)</td></tr>
 </table></div>
@@ -671,7 +691,8 @@ button for them and stays locked.</p>
 <div class="tbl"><table>
 <tr><th>Where</th><th>Files</th></tr>
 <tr><td><code>apps/games/gameone/src</code></td><td><code>main.tsx</code> · <code>game.ts</code> (bootGame, createTransportFactory) ·
-  <code>app/app.tsx</code> · <code>dev/mock-transport.ts</code> · <code>styles.css</code> · <code>assets/</code></td></tr>
+  <code>app/app.tsx</code> · <code>launch/read-launch-config.ts</code> · <code>dev/mock-transport.ts</code> ·
+  <code>styles.css</code> · <code>assets/</code></td></tr>
 <tr><td><code>packages/protocol/src/slot</code></td><td><code>schemas/</code> init-response, game-state, action-wrapper,
   standard-action-response, slot, reel, win-line, step, mode, freespin-extra, external-freespins, bet-value, bigwin-steps,
   field-item · <code>transport/create-slot-http-transport.ts</code> · <code>config/slot-error-code.ts</code> · <code>types/</code></td></tr>
@@ -683,14 +704,15 @@ button for them and stays locked.</p>
   <code>common/utils/to-session-error.ts</code></td></tr>
 <tr><td><code>packages/renderer/src</code></td><td><code>slot/slot-scene.ts</code> · <code>slot/reel-motion.ts</code> ·
   <code>slot/win-lines.ts</code> · <code>store/connect-spin-view.ts</code>, <code>types/spin-view.type.ts</code></td></tr>
-<tr><td><code>packages/hud/src</code></td><td><code>slot/slot-hud.tsx</code>, <code>slot-hud.module.css</code> ·
+<tr><td><code>packages/hud/src</code></td><td><code>slot/slot-hud.tsx</code>, <code>step-dialog.tsx</code>,
+  <code>slot-hud.module.css</code> ·
   <code>store/use-slot-hud-state.ts</code> · <code>common/components/dialog.tsx</code> · <code>common/utils/money.ts</code></td></tr>
 </table></div>
 
 <!-- ============================================================ -->
 <h2 id="testing">18. Testing</h2>
 <div class="card">
-<p style="margin-top:0">11 spec files next to the code (Vitest; React Testing Library for the HUD and app). Protocol and
+<p style="margin-top:0">12 spec files next to the code (Vitest; React Testing Library for the HUD and app). Protocol and
 session tests use the JSON examples from <code>docs/Test Game Front API.md</code>.</p>
 <ul>
   <li><strong>protocol</strong>: <code>schemas.spec</code> (doc examples), <code>create-slot-http-transport</code>
@@ -698,7 +720,9 @@ session tests use the JSON examples from <code>docs/Test Game Front API.md</code
   <li><strong>game-core</strong>: <code>create-slot-session</code> — the full request → present → commit loop, auto steps,
     handoff, errors, intent guards — with a fake transport.</li>
   <li><strong>renderer</strong>: <code>reel-motion</code>, <code>win-lines</code>, <code>connect-spin-view</code>.</li>
-  <li><strong>hud</strong>: <code>slot-hud</code>, <code>money</code>. <strong>app</strong>: <code>app.spec</code>.</li>
+  <li><strong>hud</strong>: <code>slot-hud</code> (including one test per bonus / jackpot / getPreviousState dialog),
+    <code>money</code>.</li>
+  <li><strong>app</strong>: <code>app.spec</code>, <code>read-launch-config</code>.</li>
 </ul>
 <p style="margin-bottom:0">Coverage floor 80% per project; Pixi scene files excluded. No Playwright smoke for a spin
 cycle yet (planned).</p>
@@ -721,11 +745,9 @@ cycle yet (planned).</p>
 <h2 id="gaps">20. Gaps &amp; risks</h2>
 <div class="tbl"><table>
 <tr><th>Area</th><th>Gap</th><th>Where</th><th>Impact / next step</th></tr>
-<tr><td>Production fallback</td><td>No <code>DEV</code> check: missing key or env silently runs the mock</td><td><code>game.ts</code> createTransportFactory</td>
-  <td>A misconfigured production build shows fake money. Mirror Crash One's <code>readLaunchConfig</code>.</td></tr>
-<tr><td>Boot failure</td><td><code>bootGame</code> rejection not handled</td><td><code>main.tsx</code></td><td>Blank page. Render the error as Crash One does.</td></tr>
-<tr><td>Bonus / jackpot UI</td><td>Intents exist, no HUD controls</td><td><code>slot-hud.tsx</code></td><td>A <code>bonus</code> / <code>jackpot</code> / <code>getPreviousState</code> step locks the game.</td></tr>
 <tr><td>Tournaments</td><td><code>transport.tournaments()</code> has no caller; only popups are shown</td><td>session, HUD</td><td>No leaderboard screen yet.</td></tr>
+<tr><td>Step dialogs</td><td>Bonus and jackpot use plain buttons in a dialog</td><td><code>step-dialog.tsx</code></td>
+  <td>Playable, not styled per game. Replace with the game's own screens when it has them.</td></tr>
 <tr><td>Art &amp; motion</td><td>Placeholder tiles, hard stop, no big win (<code>bigwin</code> params unused)</td><td><code>slot-scene.ts</code>, <code>reel-motion.ts</code></td><td>Atlases, Spine, GSAP bounce and big-win timeline per game.</td></tr>
 <tr><td>Variant games</td><td>Only the standard adapter exists; scene typed to <code>GameState</code></td><td><code>game-core/slot/adapters</code>, renderer</td><td>Each of the 7 variants needs an adapter (and scene support).</td></tr>
 <tr><td>i18n</td><td>English inline; <code>translationsUrl</code> unused</td><td>HUD</td><td>Wire <code>@fep/i18n</code>.</td></tr>
