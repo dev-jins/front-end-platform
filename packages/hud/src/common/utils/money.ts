@@ -32,6 +32,13 @@ export function percentOf(amount: string, percent: number): string {
     return toDecimal(units * BigInt(percent), decimals + 2);
 }
 
+/** `amount × factor` for a decimal factor, exact, e.g. bet × multiplier for a potential win. Formatting rounds it. */
+export function multiplyByDecimal(amount: string, factor: string): string {
+    const a = parse(amount);
+    const b = parse(factor);
+    return toDecimal(a.units * b.units, a.decimals + b.decimals);
+}
+
 /** True for "0", "0.00", "-0". */
 export function isZeroMoney(amount: string): boolean {
     return parse(amount).units === 0n;

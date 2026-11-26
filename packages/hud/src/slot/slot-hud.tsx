@@ -1,8 +1,9 @@
 import type { SlotSession } from "@fep/game-core/slot";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 
+import { Dialog } from "../common/components/dialog";
+import { formatMoney, isZeroMoney, multiplyMoney, percentOf } from "../common/utils/money";
 import { useSlotHudState } from "../store/use-slot-hud-state";
-import { formatMoney, isZeroMoney, multiplyMoney, percentOf } from "./money";
 import styles from "./slot-hud.module.css";
 
 export interface SlotHudProps<S> {
@@ -143,16 +144,5 @@ export function SlotHud<S>({ session, buyFeature = false, onReload = reloadPage 
                 </Dialog>
             ) : null}
         </>
-    );
-}
-
-function Dialog({ title, children }: { title: string; children: ReactNode }) {
-    return (
-        <div className={styles.backdrop}>
-            <div className={styles.dialog} role="alertdialog" aria-modal="true" aria-label={title}>
-                <h2>{title}</h2>
-                {children}
-            </div>
-        </div>
     );
 }

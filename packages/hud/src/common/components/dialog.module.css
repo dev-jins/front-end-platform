@@ -1,0 +1,49 @@
+.dialog button {
+    border: 0;
+    border-radius: 999px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.dialog button:focus-visible {
+    outline: 3px solid #fde047;
+    outline-offset: 2px;
+}
+
+.backdrop {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    background: rgb(0 0 0 / 60%);
+}
+
+.dialog {
+    display: grid;
+    gap: 12px;
+    max-width: 360px;
+    padding: 24px;
+    border-radius: 12px;
+    background: #1e293b;
+    color: #f8fafc;
+    text-align: center;
+    font-family: system-ui, sans-serif;
+}
+
+.dialog h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.dialog p {
+    margin: 0;
+}
+
+.dialog button {
+    justify-self: center;
+    padding: 10px 32px;
+    background: #22c55e;
+    color: #052e16;
+}

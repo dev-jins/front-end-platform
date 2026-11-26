@@ -1,4 +1,4 @@
-import { formatMoney, isZeroMoney, multiplyMoney, percentOf } from "./money";
+import { formatMoney, isZeroMoney, multiplyByDecimal, multiplyMoney, percentOf } from "./money";
 
 describe("multiplyMoney", () => {
     it("multiplies exactly", () => {
@@ -51,5 +51,13 @@ describe("formatMoney", () => {
 
     it("rejects malformed amounts", () => {
         expect(() => formatMoney("abc", { currency: "USD", rounding: 0 })).toThrow("Not a decimal");
+    });
+});
+
+describe("multiplyByDecimal", () => {
+    it("multiplies by a decimal exactly", () => {
+        expect(multiplyByDecimal("1.00", "1.84")).toBe("1.8400");
+        expect(multiplyByDecimal("0.1", "3")).toBe("0.3");
+        expect(multiplyByDecimal("10", "2.5")).toBe("25.0");
     });
 });
