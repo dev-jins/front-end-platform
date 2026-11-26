@@ -7,7 +7,7 @@ they never call the API.
 | --------------------- | -------------------------------------------------------------------- |
 | `@fep/game-core`      | Shared: `SessionError`, `toSessionError` (error level policy)        |
 | `@fep/game-core/slot` | `createSlotSession`, `StateAdapter`, `standardStateAdapter`, `Round` |
-| `@fep/game-core/crash` | `createCrashStore`, `CrashState`, `applyCrashEvent` (stream event reducer) |
+| `@fep/game-core/crash` | `createCrashSession`, `CrashState`, `applyCrashEvent` (stream event reducer), `createCrashStore` |
 
 ## Slot session
 
@@ -40,28 +40,42 @@ useStore(session.store, (s) => s.balance); // React HUD
 - **Operator freespins handoff.** When `externalFreespins.nextSessionKey` arrives, the session switches transport and
   inits the new key.
 
-## Crash store
+## Crash session
 
 ```ts
-const store = createCrashStore();
-transport.subscribe({
-  onEvent: (event) => store.setState((s) => applyCrashEvent(s, event, Date.now())),
-  onStatus: (connection) => store.setState({ connection }),
+const session = createCrashSession({
+  transport, // gateway, direct (Provider A) or mock — picked by the app from launch config
 });
+
+await session.start(); // init once, then the event stream
+await session.bet(1, "1.00", "2.00"); // lane, amount, optional auto cash-out; false = not allowed, nothing sent
+await session.cashout(1);
+useStore(session.store, (s) => s.lanes[1]?.multiplier); // React HUD
 ```
 
-- **Pure reducer.** `applyCrashEvent(state, event, receivedAt)` folds canonical stream events (`@fep/protocol/crash`)
-  into `CrashState`; the session (next step) owns the transport, intents and errors.
-- **Snapshot replaces, events patch.** A `snapshot` replaces lanes, history, top wins, my bets and balance, keeping
-  each lane's `pending` command, and resets `lastSeq` so a new connection is always accepted. Other events at or below
-  `lastSeq` are repeats and are ignored.
-- **Lanes by id.** `lanes[1..3]`, only those the snapshot sent; a game without lanes has lane 1. An event for an unseen
-  round starts that round first (its `roundStart` was missed).
-- **Own bet.** `myBetAccepted` sets `myBet`; `myBetSettled` keeps a cashed-out bet on the lane until the next round,
-  removes a lost one, and prepends the result to `myBets` (newest `MY_BETS_LIMIT`).
-- **Clock.** `clockOffsetMs` is the largest `serverTime − receivedAt` seen (delivery delay only makes samples smaller).
-  The renderer computes the curve from `Date.now() + clockOffsetMs`.
-- Not here yet: per-frame batching of live-bet events (a session / renderer concern).
+- **Init once, then stream.** `start()` ignores repeat calls. Stream events are queued and applied in one store update
+  per burst (`scheduleFlush`, default a 16 ms timer — not `requestAnimationFrame`, which stops in hidden tabs).
+- **Guarded intents.** Refused locally unless the session is `ready`, the stream `live`, no error is open and nothing is
+  in flight on that lane. `bet`: countdown (or any phase when the provider queues for the next round), no bet yet,
+  amount within `init.bets`, auto cash-out ≥ the provider's minimum (and only if it has one). `cancelBet`: countdown,
+  with a bet. `cashout`: running, bet for this round, not cashed out.
+- **Pending.** The lane's `pending` is set while a command is in flight; the response's balance, bet and cash-out are
+  applied when it lands. Every command gets a fresh `requestId` (`crypto.randomUUID()`).
+- **Errors by level.** CRITICAL → `phase: "over"`; ALERT → `error`, `dismissError()`; WARNING → `onWarning`. Unlike
+  slots, a network failure or unreadable response is ALERT: commands are idempotent by `requestId` and the stream
+  reports what happened to the bet. Init failures and a refused stream (`offline`) end the session.
+
+### Reducer
+
+- `applyCrashEvent(state, event, receivedAt)` is pure. A `snapshot` replaces lanes, history, top wins, my bets and
+  balance, keeping each lane's `pending`, and resets `lastSeq` so a new connection is always accepted. Other events at
+  or below `lastSeq` are repeats and are ignored.
+- Lanes by id: only those the snapshot sent (lane 1 for games without lanes). An event for an unseen round starts that
+  round first (its `roundStart` was missed).
+- `myBetSettled` keeps a cashed-out bet on the lane until the next round, removes a lost one, and prepends the result
+  to `myBets` (newest `MY_BETS_LIMIT`).
+- `clockOffsetMs` is the largest `serverTime − receivedAt` seen; the renderer draws the curve from
+  `Date.now() + clockOffsetMs`.
 
 ```sh
 bun nx test game-core --coverage
