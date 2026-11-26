@@ -5,6 +5,7 @@
         "prepare": "husky",
         "serve:lobby": "nx serve lobby",
         "serve:gameone": "nx serve gameone",
+        "serve:crashone": "nx serve crashone",
         "build": "nx run-many -t build",
         "test": "nx run-many -t test",
         "lint": "nx run-many -t lint",
