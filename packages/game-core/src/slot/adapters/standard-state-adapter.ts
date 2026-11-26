@@ -6,6 +6,7 @@ import type { StateAdapter } from "../types/state-adapter.type";
 export const standardStateAdapter: StateAdapter<GameState> = {
     parse(raw) {
         const state = gameStateSchema.parse(raw);
-        return { state, nextStep: state.nextStep, mode: state.mode, totalWin: state.totalWin };
+        const { nextStep, mode, totalWin, jackpotState } = state;
+        return jackpotState ? { state, nextStep, mode, totalWin, jackpotState } : { state, nextStep, mode, totalWin };
     },
 };

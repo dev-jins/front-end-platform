@@ -143,4 +143,55 @@ describe("SlotHud", () => {
         await click("OK");
         expect(screen.queryByRole("alertdialog")).toBeNull();
     });
+
+    describe("steps that wait for the player", () => {
+        const step = (patch: Raw) => ({ ...structuredClone(spinExample), ...patch });
+        const field = {
+            field: { cols: 2, rows: 1, items: [{ col: 1, row: 1, item: "type1" }] },
+            lastOpenedItem: { col: 1, row: 1, item: "type1" },
+            isCompleted: false,
+            winItemType: null,
+            closedItems: [{ col: 2, row: 1, item: "type2" }],
+        };
+
+        it("bonus: one button per bonusParameters variant, sends the chosen one", async () => {
+            const { transport } = await renderStarted({ actions: [step({ nextStep: "bonus" }), spinExample] });
+            await click("Spin");
+            expect(screen.getByRole("alertdialog", { name: "Choose your bonus" })).toBeTruthy();
+            expect((screen.getByRole("button", { name: "Spin" }) as HTMLButtonElement).disabled).toBe(true);
+            await click("10 free spins ×2");
+            expect(transport.action).toHaveBeenLastCalledWith("bonus", expect.objectContaining({ variant: "2" }));
+            expect(screen.queryByRole("alertdialog")).toBeNull();
+        });
+
+        it("getPreviousState: Continue leaves the bonus game", async () => {
+            const { transport } = await renderStarted({
+                actions: [step({ nextStep: "getPreviousState" }), spinExample],
+            });
+            await click("Spin");
+            await click("Continue");
+            expect(transport.action).toHaveBeenLastCalledWith("getPreviousState", expect.anything());
+            expect(screen.queryByRole("alertdialog")).toBeNull();
+        });
+
+        it("jackpot field: opened cells are locked, a closed one is sent 1-based", async () => {
+            const { transport } = await renderStarted({
+                actions: [step({ nextStep: "jackpot", jackpotState: field }), spinExample],
+            });
+            await click("Spin");
+            expect((screen.getByRole("button", { name: "Cell 1, 1: type1" }) as HTMLButtonElement).disabled).toBe(true);
+            await click("Open cell 2, 1");
+            expect(transport.action).toHaveBeenLastCalledWith(
+                "open-field-item",
+                expect.objectContaining({ col: 2, row: 1 })
+            );
+        });
+
+        it("jackpot without an open field: Continue calls /jackpot", async () => {
+            const { transport } = await renderStarted({ actions: [step({ nextStep: "jackpot" }), spinExample] });
+            await click("Spin");
+            await click("Continue");
+            expect(transport.action).toHaveBeenLastCalledWith("jackpot", expect.anything());
+        });
+    });
 });

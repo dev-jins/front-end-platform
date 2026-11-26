@@ -5,6 +5,7 @@ export type SlotHudState<S> = Pick<SlotState<S>, "phase" | "init" | "balance" | 
     win: string | null;
     mode: Round<S>["mode"] | null;
     nextStep: Round<S>["nextStep"] | null;
+    jackpotState: NonNullable<Round<S>["jackpotState"]> | null;
     startPopup: SlotState<S>["tournamentStartPopup"];
     winnerPopup: SlotState<S>["tournamentWinnerPopup"];
 };
