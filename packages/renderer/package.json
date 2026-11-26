@@ -9,6 +9,11 @@
             "import": "./src/slot/index.ts",
             "default": "./src/slot/index.ts"
         },
+        "./crash": {
+            "types": "./src/crash/index.ts",
+            "import": "./src/crash/index.ts",
+            "default": "./src/crash/index.ts"
+        },
         "./package.json": "./package.json"
     },
     "nx": {
