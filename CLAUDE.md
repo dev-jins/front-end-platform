@@ -22,7 +22,8 @@ front-end-platform/
 ├── apps/
 │   ├── lobby          # Vite + React (port 4200) — one build, many lobbies via runtime profile
 │   └── games/
-│       └── gameone    # Vite + React game client (port 4300) — config, atlases, Spine, adapter
+│       ├── gameone    # Vite + React game client (port 4300) — config, atlases, Spine, adapter
+│       └── crashone   # Vite + React crash game client (port 4310) — launch config picks gateway / direct / mock
 ├── packages/
 │   ├── protocol       # Zod schemas + transports: common (`@fep/protocol`) and per game family (`@fep/protocol/slot`)
 │   ├── game-core      # session, fingerprint, nextStep loop, error policy — plain TS (@fep/game-core)
@@ -89,6 +90,7 @@ bun install
 # Development
 bun run serve:lobby             # Lobby (port 4200)
 bun run serve:gameone           # Game One (port 4300)
+bun run serve:crashone          # Crash One (port 4310), dev mock without launch params
 bun nx serve <PROJECT>
 
 # Build
@@ -123,7 +125,7 @@ Conventional Commits format enforced by commitlint + husky (`commitlint.config.m
 <type>(<scope>): <description>
 ```
 
-- **Scopes:** lobby, gameone, protocol, game-core, hud, renderer, lobby-kit, i18n, mapper-provider-a, workspace, deps
+- **Scopes:** lobby, gameone, crashone, protocol, game-core, hud, renderer, lobby-kit, i18n, mapper-provider-a, workspace, deps
 - **Types:** feat, fix, chore, docs, refactor, style, ci, perf, test
 - Max subject length: 64 characters
 - New app/package → add its name to `scope-enum`

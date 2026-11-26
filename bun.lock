@@ -50,6 +50,19 @@
         "vitest": "~5.0.1",
       },
     },
+    "apps/games/crashone": {
+      "name": "@fep/crashone",
+      "version": "0.0.1",
+      "dependencies": {
+        "@fep/game-core": "workspace:*",
+        "@fep/hud": "workspace:*",
+        "@fep/mapper-provider-a": "workspace:*",
+        "@fep/protocol": "workspace:*",
+        "@fep/renderer": "workspace:*",
+        "pixi.js": "8.23.0",
+        "zustand": "5.1.0",
+      },
+    },
     "apps/games/gameone": {
       "name": "@fep/gameone",
       "version": "0.0.1",
@@ -433,6 +446,8 @@
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.4.1", "", { "dependencies": { "@eslint/core": "^0.17.0", "levn": "^0.4.1" } }, "sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA=="],
 
     "@exodus/bytes": ["@exodus/bytes@1.16.0", "", { "peerDependencies": { "@noble/hashes": "^1.8.0 || ^2.0.0" }, "optionalPeers": ["@noble/hashes"] }, "sha512-IcpW84uEn3N7ETtNZMlxKhfl6Pec8rUNGOTBtWbK1FKhJxIFAptZyVrvVRVBimAJxJCgc3PxepxkdWWG4DVzfA=="],
+
+    "@fep/crashone": ["@fep/crashone@workspace:apps/games/crashone"],
 
     "@fep/game-core": ["@fep/game-core@workspace:packages/game-core"],
 

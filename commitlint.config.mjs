@@ -8,6 +8,7 @@ export default {
             [
                 "lobby",
                 "gameone",
+                "crashone",
                 "protocol",
                 "game-core",
                 "hud",
