@@ -1,0 +1,24 @@
+{
+    "name": "@fep/mapper-provider-a",
+    "version": "0.0.1",
+    "private": true,
+    "type": "module",
+    "exports": {
+        "./crash": {
+            "types": "./src/crash/index.ts",
+            "import": "./src/crash/index.ts",
+            "default": "./src/crash/index.ts"
+        },
+        "./package.json": "./package.json"
+    },
+    "nx": {
+        "name": "mapper-provider-a",
+        "tags": [
+            "type:mapper"
+        ]
+    },
+    "dependencies": {
+        "@fep/protocol": "workspace:*",
+        "zod": "^4.6.7"
+    }
+}

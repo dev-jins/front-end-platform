@@ -24,6 +24,11 @@ describe("crashInitSchema", () => {
         expect(parsed.capabilities.crash.curve).toEqual({ kind: "exp", k: 0.00006 });
     });
 
+    it("accepts a provider without a session expiry", () => {
+        const session = { ...init.session, expiresAt: null };
+        expect(crashInitSchema.parse({ ...init, session }).session.expiresAt).toBeNull();
+    });
+
     it("accepts a provider without auto cash-out and with ticks only", () => {
         const crash = { ...init.capabilities.crash, lanes: 1, autoCashout: null, curve: { kind: "ticks" } };
         expect(crashInitSchema.parse({ ...init, capabilities: { crash } }).capabilities.crash.autoCashout).toBeNull();

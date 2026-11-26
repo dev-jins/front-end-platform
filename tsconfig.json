@@ -26,6 +26,9 @@
         },
         {
             "path": "./packages/renderer"
+        },
+        {
+            "path": "./packages/mappers/provider-a"
         }
     ],
     "compilerOptions": {}

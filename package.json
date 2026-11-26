@@ -62,7 +62,8 @@
     "workspaces": [
         "apps/*",
         "apps/games/*",
-        "packages/*"
+        "packages/*",
+        "packages/mappers/*"
     ],
     "packageManager": "bun@1.2.3",
     "lint-staged": {
