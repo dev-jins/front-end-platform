@@ -4,17 +4,21 @@ import { connectSpinView, createSlotScene, type SlotScene } from "@fep/renderer/
 import { Application } from "pixi.js";
 
 import { createMockTransport } from "./dev/mock-transport";
+import { readLaunchConfig } from "./launch/read-launch-config";
 
 /** Space kept free under the reels for the HUD, in CSS pixels. */
 const HUD_HEIGHT = 140;
 
 function createTransportFactory() {
-    const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
-    const sessionKey = new URLSearchParams(window.location.search).get("sessionKey");
-    if (apiUrl && sessionKey) {
+    const config = readLaunchConfig(
+        window.location.search,
+        import.meta.env.VITE_API_URL as string | undefined,
+        import.meta.env.DEV
+    );
+    if (config) {
         return {
-            sessionKey,
-            createTransport: (key: string) => createSlotHttpTransport({ baseUrl: apiUrl, sessionKey: key }),
+            sessionKey: config.sessionKey,
+            createTransport: (key: string) => createSlotHttpTransport({ baseUrl: config.apiUrl, sessionKey: key }),
         };
     }
     const mock = createMockTransport();
@@ -26,6 +30,7 @@ function createTransportFactory() {
  * out this tab (error 112) — which React StrictMode's double effects would do.
  */
 export async function bootGame(host: HTMLElement): Promise<SlotSession<GameState>> {
+    const transport = createTransportFactory();
     const app = new Application();
     await app.init({ resizeTo: host, background: "#0b1020", antialias: true });
     host.appendChild(app.canvas);
@@ -34,7 +39,7 @@ export async function bootGame(host: HTMLElement): Promise<SlotSession<GameState
     const sceneReady = new Promise<SlotScene>((resolve) => (resolveScene = resolve));
 
     const session = createSlotSession({
-        ...createTransportFactory(),
+        ...transport,
         adapter: standardStateAdapter,
         // A reload into freespins resumes before the scene exists; wait for it.
         present: async (round) => (await sceneReady).present(round.state),
