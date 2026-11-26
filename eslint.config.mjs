@@ -24,6 +24,7 @@ export default [
                                 "type:renderer",
                                 "type:core",
                                 "type:protocol",
+                                "type:mapper",
                                 "type:util",
                             ],
                         },
@@ -37,6 +38,8 @@ export default [
                         },
                         { sourceTag: "type:core", onlyDependOnLibsWithTags: ["type:protocol", "type:util"] },
                         { sourceTag: "type:protocol", onlyDependOnLibsWithTags: [] },
+                        // Provider mappers translate one provider's API into the protocol; only apps pick them.
+                        { sourceTag: "type:mapper", onlyDependOnLibsWithTags: ["type:protocol"] },
                         { sourceTag: "type:util", onlyDependOnLibsWithTags: [] },
                     ],
                 },

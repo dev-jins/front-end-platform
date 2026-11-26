@@ -29,7 +29,9 @@ front-end-platform/
 │   ├── renderer       # PixiJS reels, win lines, big win — plain TS, no React (@fep/renderer)
 │   ├── hud            # React HUD: bet panel, balance, popups (@fep/hud)
 │   ├── lobby-kit      # lobby components, theming, profile types (@fep/lobby-kit)
-│   └── i18n           # i18next + translationsUrl (@fep/i18n)
+│   ├── i18n           # i18next + translationsUrl (@fep/i18n)
+│   └── mappers/
+│       └── provider-a # Provider A native API → protocol, direct transport (@fep/mapper-provider-a)
 └── docs/              # architecture + API docs (not formatted by Biome)
 ```
 
@@ -41,6 +43,8 @@ constraints in root `eslint.config.mjs`):
 `type:app` → `type:ui` / `type:renderer` → `type:core` → `type:protocol` (`type:util` usable from anything above
 protocol)
 
+- `type:mapper` (`packages/mappers/*`) depends on `type:protocol` only and is imported by apps only: it translates one
+  provider's native API into the protocol and holds that provider's direct transport
 - React (`hud`, `lobby-kit`) and Pixi (`renderer`) never call the API — they read the store and send intents to
   `game-core`
 - Per-frame reel motion is imperative Pixi driven from the store; React never re-renders per frame
@@ -119,7 +123,7 @@ Conventional Commits format enforced by commitlint + husky (`commitlint.config.m
 <type>(<scope>): <description>
 ```
 
-- **Scopes:** lobby, gameone, protocol, game-core, hud, renderer, lobby-kit, i18n, workspace, deps
+- **Scopes:** lobby, gameone, protocol, game-core, hud, renderer, lobby-kit, i18n, mapper-provider-a, workspace, deps
 - **Types:** feat, fix, chore, docs, refactor, style, ci, perf, test
 - Max subject length: 64 characters
 - New app/package → add its name to `scope-enum`

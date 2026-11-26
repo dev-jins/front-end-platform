@@ -91,6 +91,14 @@
       "name": "@fep/lobby-kit",
       "version": "0.0.1",
     },
+    "packages/mappers/provider-a": {
+      "name": "@fep/mapper-provider-a",
+      "version": "0.0.1",
+      "dependencies": {
+        "@fep/protocol": "workspace:*",
+        "zod": "^4.6.7",
+      },
+    },
     "packages/protocol": {
       "name": "@fep/protocol",
       "version": "0.0.1",
@@ -437,6 +445,8 @@
     "@fep/lobby": ["@fep/lobby@workspace:apps/lobby"],
 
     "@fep/lobby-kit": ["@fep/lobby-kit@workspace:packages/lobby-kit"],
+
+    "@fep/mapper-provider-a": ["@fep/mapper-provider-a@workspace:packages/mappers/provider-a"],
 
     "@fep/protocol": ["@fep/protocol@workspace:packages/protocol"],
 
