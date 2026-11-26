@@ -4,10 +4,7 @@ import { crashInitSchema } from "../schemas/crash-init.schema";
 import type { CrashTransport } from "../types/crash-transport.type";
 import type { GatewayCrashTransportOptions } from "../types/gateway-crash-transport-options.type";
 import { parseCrashEvent } from "../utils/parse-crash-event";
-import { readSseMessages } from "../utils/read-sse-messages";
-
-/** Statuses where retrying the stream cannot help. */
-const FATAL_STREAM_STATUSES = new Set([401, 403, 404]);
+import { subscribeSse } from "../utils/subscribe-sse";
 
 /** Production transport: HTTPS commands to the gateway, events from its SSE stream. */
 export function createGatewayCrashTransport({
@@ -61,63 +58,23 @@ export function createGatewayCrashTransport({
 
         subscribe({ onEvent, onStatus, onError }) {
             const { token, streamUrl } = requireSession();
-            let closed = false;
-            let controller: AbortController | undefined;
-            let retryTimer: ReturnType<typeof setTimeout> | undefined;
-            let lastEventId: string | undefined;
-
-            function handle(data: string) {
-                try {
-                    const event = parseCrashEvent(JSON.parse(data));
-                    if (event) onEvent(event);
-                    else onError?.(new Error(`CrashTransport: skipped unknown event ${data}`));
-                } catch (error) {
-                    onError?.(error);
-                }
-            }
-
-            async function connect(attempt: number): Promise<void> {
-                onStatus(attempt === 0 ? "connecting" : "reconnecting");
-                controller = new AbortController();
-                try {
-                    const response = await fetchFn(streamUrl, {
-                        headers: {
-                            Accept: "text/event-stream",
-                            Authorization: `Bearer ${token}`,
-                            ...(lastEventId === undefined ? {} : { "Last-Event-ID": lastEventId }),
-                        },
-                        signal: controller.signal,
-                    });
-                    if (!response.ok || !response.body) {
-                        const error = new GameApiError(response.status, { kind: "unexpected", body: undefined });
-                        if (FATAL_STREAM_STATUSES.has(response.status)) {
-                            onError?.(error);
-                            onStatus("offline");
-                            return;
-                        }
-                        throw error;
+            return subscribeSse({
+                url: streamUrl,
+                headers: { Authorization: `Bearer ${token}` },
+                fetch: fetchFn,
+                retryDelaysMs,
+                onStatus,
+                onError,
+                onMessage({ data }) {
+                    try {
+                        const event = parseCrashEvent(JSON.parse(data));
+                        if (event) onEvent(event);
+                        else onError?.(new Error(`CrashTransport: skipped unknown event ${data}`));
+                    } catch (error) {
+                        onError?.(error);
                     }
-                    onStatus("live");
-                    attempt = 0;
-                    for await (const message of readSseMessages(response.body)) {
-                        lastEventId = message.id;
-                        handle(message.data);
-                    }
-                } catch (error) {
-                    if (closed) return;
-                    onError?.(error);
-                }
-                if (closed) return;
-                const delay = retryDelaysMs[Math.min(attempt, retryDelaysMs.length - 1)] ?? 0;
-                retryTimer = setTimeout(() => void connect(attempt + 1), delay);
-            }
-
-            void connect(0);
-            return () => {
-                closed = true;
-                clearTimeout(retryTimer);
-                controller?.abort();
-            };
+                },
+            });
         },
     };
 }

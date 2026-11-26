@@ -35,5 +35,7 @@ export type * from "./types/my-bet.type";
 export type * from "./types/my-bet-record.type";
 export type * from "./types/round-result.type";
 export type * from "./types/sse-message.type";
+export type * from "./types/subscribe-sse-options.type";
 export * from "./utils/parse-crash-event";
 export * from "./utils/read-sse-messages";
+export * from "./utils/subscribe-sse";
