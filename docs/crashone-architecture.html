@@ -1,0 +1,845 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crash One Architecture</title>
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#1b1d21; --ink-2:#555b66; --line:#d9dbe0;
+  --accent:#2f5bd3; --accent-soft:#e6edfc; --ok:#1f8a4c; --ok-soft:#e3f4ea;
+  --warn:#a86300; --warn-soft:#fbf0dc; --bad:#c2352b; --bad-soft:#fbe5e3;
+  --violet:#7a4cc2; --violet-soft:#efe8fa;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121417; --surface:#1b1e23; --ink:#e8eaed; --ink-2:#a2a8b3; --line:#30353d;
+    --accent:#7aa2ff; --accent-soft:#1f2a44; --ok:#5cc98a; --ok-soft:#173022;
+    --warn:#e6a64a; --warn-soft:#352812; --bad:#ff7b70; --bad-soft:#3a1a18;
+    --violet:#b893f5; --violet-soft:#2a2140;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121417; --surface:#1b1e23; --ink:#e8eaed; --ink-2:#a2a8b3; --line:#30353d;
+  --accent:#7aa2ff; --accent-soft:#1f2a44; --ok:#5cc98a; --ok-soft:#173022;
+  --warn:#e6a64a; --warn-soft:#352812; --bad:#ff7b70; --bad-soft:#3a1a18;
+  --violet:#b893f5; --violet-soft:#2a2140;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:28px;margin:0 0 4px}
+h2{font-size:20px;margin:48px 0 6px;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:15px;margin:20px 0 6px}
+p.lead{color:var(--ink-2);margin:0 0 20px;max-width:780px}
+p{max-width:820px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em;background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 8px}
+nav a{font-size:13px;text-decoration:none;border:1px solid var(--line);background:var(--surface);padding:4px 10px;border-radius:999px}
+nav a:hover{border-color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
+.card ul,.card ol{padding-left:20px;margin:6px 0}
+.card li{margin:4px 0}
+.diagram{overflow-x:auto}
+.diagram svg{display:block;width:100%;min-width:720px;height:auto}
+svg text{fill:var(--ink);font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+svg .sub{fill:var(--ink-2);font-size:11.5px}
+svg .mono{font-family:var(--mono);font-size:11.5px}
+svg .small{font-size:11.5px}
+svg .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+svg .box.core{fill:var(--accent-soft);stroke:var(--accent)}
+svg .box.react{fill:var(--ok-soft);stroke:var(--ok)}
+svg .box.pixi{fill:var(--violet-soft);stroke:var(--violet)}
+svg .box.warn{fill:var(--warn-soft);stroke:var(--warn)}
+svg .box.bad{fill:var(--bad-soft);stroke:var(--bad)}
+svg .box.ext{stroke-dasharray:5 4}
+svg .note{fill:var(--warn-soft);stroke:var(--warn);stroke-width:1}
+svg .frame{fill:none;stroke:var(--ink-2);stroke-width:1.2;stroke-dasharray:6 5}
+svg .life{stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 4}
+svg .edge{stroke:var(--ink-2);stroke-width:1.5;fill:none}
+svg .edge.dash{stroke-dasharray:5 4}
+svg .edge.live{stroke:var(--warn)}
+svg .edge.core{stroke:var(--accent)}
+svg .head{fill:var(--ink-2)}
+svg .head.live{fill:var(--warn)}
+svg .head.core{fill:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2)}
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;margin:12px 0}
+.shape{font-family:var(--mono);font-size:12.5px;line-height:1.7;white-space:pre;overflow-x:auto;margin:0}
+.shape .c{color:var(--ink-2)} .shape .k{color:var(--accent);font-weight:600}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;margin-right:4px;white-space:nowrap}
+.pill.react{background:var(--ok-soft);color:var(--ok)}
+.pill.pixi{background:var(--violet-soft);color:var(--violet)}
+.pill.core{background:var(--accent-soft);color:var(--accent)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.verdict{border-left:4px solid var(--accent)}
+.note-card{border-left:4px solid var(--warn)}
+.bad-card{border-left:4px solid var(--bad)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.grid2 .card{margin:0}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}
+footer{margin-top:48px;color:var(--ink-2);font-size:13px}
+</style>
+</head>
+<body>
+<main>
+
+<h1>Crash One — architecture as built</h1>
+<p class="lead">
+How <code>apps/games/crashone</code> works today: from the launch URL to pixels on the canvas, every package it pulls
+in, every way it can talk to a backend, and what is still a placeholder. This describes the code as of 2026-11-26
+(<code>main</code> plus the Mercure stub from PR #13). The design rationale and the gateway roadmap are in
+<a href="crash-architecture.html">crash-architecture.html</a>; Provider A's native API is
+<a href="crash-api.md">crash-api.md</a>.
+</p>
+
+<nav>
+  <a href="#picture">1. Full picture</a>
+  <a href="#layers">2. Packages &amp; layering</a>
+  <a href="#boot">3. Boot sequence</a>
+  <a href="#launch">4. Launch config &amp; transports</a>
+  <a href="#protocol">5. Canonical protocol</a>
+  <a href="#direct">6. Direct mode (Provider A)</a>
+  <a href="#gateway">7. Gateway mode</a>
+  <a href="#mock">8. Dev mock</a>
+  <a href="#pipeline">9. Event pipeline</a>
+  <a href="#store">10. Store &amp; reducer</a>
+  <a href="#round">11. Round lifecycle</a>
+  <a href="#session">12. Session &amp; intents</a>
+  <a href="#errors">13. Errors &amp; connection</a>
+  <a href="#render">14. Rendering</a>
+  <a href="#hud">15. HUD</a>
+  <a href="#files">16. File map</a>
+  <a href="#testing">17. Testing</a>
+  <a href="#run">18. Running it</a>
+  <a href="#gaps">19. Gaps &amp; risks</a>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="picture">1. The full picture</h2>
+<p>
+Crash One is a Vite + React app that hosts two independent views over one store: a <strong>React HUD</strong>
+(balance, bet slot, history, live bets, dialogs) and a <strong>Pixi canvas</strong> (the multiplier curve). Neither
+view talks to the network. They read a <strong>zustand store</strong> owned by the <strong>crash session</strong> in
+<code>@fep/game-core/crash</code>, and the HUD sends <em>intents</em> (bet, cancel, cash out) back to the session. The
+session talks to the outside world only through one interface, <code>CrashTransport</code>, and the app picks one of
+three implementations at startup from the launch URL.
+</p>
+
+<div class="card diagram">
+<svg viewBox="0 0 1000 690" role="img" aria-label="Crash One layers: lobby opens the app; HUD and Pixi read the store owned by the crash session; the session uses CrashTransport with three implementations, each talking to its own backend.">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker>
+    <marker id="a1c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head core"/></marker>
+    <marker id="a1l" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head live"/></marker>
+  </defs>
+
+  <!-- lobby + app -->
+  <rect class="box ext" x="20" y="20" width="200" height="64" rx="8"/>
+  <text x="120" y="46" text-anchor="middle">Lobby (iframe host)</text>
+  <text x="120" y="66" text-anchor="middle" class="sub">?sessionKey= / ?launchToken=</text>
+  <path class="edge" d="M220,52 L256,52" marker-end="url(#a1)"/>
+
+  <rect class="box" x="260" y="16" width="720" height="72" rx="8"/>
+  <text x="280" y="42">apps/games/crashone  <tspan class="sub">— type:app, port 4310</tspan></text>
+  <text x="280" y="62" class="sub">main.tsx (React root) · game.ts bootGame() · launch/readLaunchConfig → createTransport</text>
+  <text x="280" y="78" class="sub">config/PROVIDER_A_GAME_CONFIG · dev/createDevCrashTransport · app/App → &lt;CrashHud&gt;</text>
+
+  <!-- views -->
+  <rect class="box react" x="40" y="130" width="420" height="84" rx="8"/>
+  <text x="60" y="156">@fep/hud/crash — CrashHud <tspan class="sub">(React, #root)</tspan></text>
+  <text x="60" y="176" class="sub">BetSlot per lane · BetList (live bets, top wins)</text>
+  <text x="60" y="194" class="sub">history strip · connection banner · error Dialog</text>
+
+  <rect class="box pixi" x="540" y="130" width="420" height="84" rx="8"/>
+  <text x="560" y="156">@fep/renderer/crash — createCrashLaneView <tspan class="sub">(Pixi, #game)</tspan></text>
+  <text x="560" y="176" class="sub">toCrashFrame · TickInterpolator · CurveTrace</text>
+  <text x="560" y="194" class="sub">curveViewport · toScreenPoint · one view per lane</text>
+
+  <!-- core -->
+  <rect class="box core" x="140" y="276" width="720" height="96" rx="8"/>
+  <text x="160" y="302">@fep/game-core/crash — createCrashSession</text>
+  <text x="160" y="322" class="sub">intents: bet(lane, amount, autoCashout?) · cancelBet(lane) · cashout(lane) · dismissError() · start() · stop()</text>
+  <text x="160" y="340" class="sub">store: zustand StoreApi&lt;CrashState&gt; — lanes, balance, history, myBets, connection, clockOffsetMs, error</text>
+  <text x="160" y="358" class="sub">events → queue → flush (~16 ms) → applyCrashEvent (pure reducer) → one setState per burst</text>
+
+  <!-- edges views <-> core -->
+  <path class="edge core" d="M200,276 L200,216" marker-end="url(#a1c)"/>
+  <text x="208" y="250" class="small">useStore selectors</text>
+  <path class="edge" d="M330,216 L330,274" marker-end="url(#a1)"/>
+  <text x="338" y="250" class="small">intents</text>
+  <path class="edge core" d="M700,276 L700,216" marker-end="url(#a1c)"/>
+  <text x="708" y="242" class="small">getState() every frame</text>
+  <text x="708" y="258" class="small">+ subscribe (record ticks)</text>
+
+  <!-- transport interface -->
+  <rect class="box core" x="310" y="412" width="380" height="62" rx="8"/>
+  <text x="500" y="438" text-anchor="middle">CrashTransport <tspan class="sub">(@fep/protocol/crash)</tspan></text>
+  <text x="500" y="458" text-anchor="middle" class="mono">init() · play(command) · subscribe(handlers)</text>
+  <path class="edge" d="M500,372 L500,410" marker-end="url(#a1)"/>
+
+  <!-- implementations -->
+  <rect class="box" x="30" y="520" width="300" height="70" rx="8"/>
+  <text x="180" y="544" text-anchor="middle">createGatewayCrashTransport</text>
+  <text x="180" y="562" text-anchor="middle" class="sub">@fep/protocol/crash · ?launchToken=</text>
+  <text x="180" y="579" text-anchor="middle" class="sub">canonical JSON in and out</text>
+
+  <rect class="box" x="350" y="520" width="300" height="70" rx="8"/>
+  <text x="500" y="544" text-anchor="middle">createDirectCrashTransport</text>
+  <text x="500" y="562" text-anchor="middle" class="sub">@fep/mapper-provider-a · ?sessionKey=</text>
+  <text x="500" y="579" text-anchor="middle" class="sub">native API → canonical in the browser</text>
+
+  <rect class="box" x="670" y="520" width="300" height="70" rx="8"/>
+  <text x="820" y="544" text-anchor="middle">createDevCrashTransport</text>
+  <text x="820" y="562" text-anchor="middle" class="sub">app dev/ on createMockCrashTransport</text>
+  <text x="820" y="579" text-anchor="middle" class="sub">no params, dev build only</text>
+
+  <path class="edge" d="M420,474 L200,518" marker-end="url(#a1)"/>
+  <path class="edge" d="M500,474 L500,518" marker-end="url(#a1)"/>
+  <path class="edge" d="M580,474 L800,518" marker-end="url(#a1)"/>
+
+  <!-- backends -->
+  <rect class="box warn ext" x="30" y="620" width="300" height="56" rx="8"/>
+  <text x="180" y="644" text-anchor="middle">Gateway service</text>
+  <text x="180" y="662" text-anchor="middle" class="sub">/v1/sessions · /v1/play · SSE stream — not built yet</text>
+
+  <rect class="box ext" x="350" y="620" width="300" height="56" rx="8"/>
+  <text x="500" y="644" text-anchor="middle">Provider A</text>
+  <text x="500" y="662" text-anchor="middle" class="sub">Game API (HTTP) + Mercure hub (SSE)</text>
+
+  <text x="820" y="644" text-anchor="middle" class="sub">no backend: generated timeline</text>
+  <text x="820" y="662" text-anchor="middle" class="sub">and bets answered in memory</text>
+
+  <path class="edge live" d="M180,590 L180,618" marker-end="url(#a1l)"/>
+  <path class="edge live" d="M500,590 L500,618" marker-end="url(#a1l)"/>
+</svg>
+<div class="legend">
+  <span class="pill react">React</span><span class="pill pixi">Pixi</span><span class="pill core">core / contract</span>
+  <span class="pill warn">planned</span> <span class="sub" style="color:var(--ink-2);font-size:13px">dashed border = outside this repo</span>
+</div>
+</div>
+
+<div class="card verdict">
+<strong>The five rules the code is built around</strong>
+<ol>
+  <li><strong>One network seam.</strong> Everything above <code>CrashTransport</code> speaks the canonical crash protocol;
+    provider quirks are translated below it (in a mapper or, later, the gateway).</li>
+  <li><strong>The server is the truth.</strong> The client never decides a crash or a payout. A cash-out shows the
+    server's multiplier and win, not the number on screen when the player clicked.</li>
+  <li><strong>Snapshot, then patches.</strong> Every stream connection starts with a full <code>snapshot</code>; every
+    later event patches it. Reconnecting is just "take the new snapshot".</li>
+  <li><strong>React never renders per frame.</strong> The HUD re-renders on state changes it selects; the curve is drawn
+    imperatively by Pixi on its ticker, reading the store directly.</li>
+  <li><strong>Init once.</strong> <code>bootGame</code> runs outside React, so StrictMode's double effects can't call init
+    twice (for Provider A a second init rotates the fingerprint and locks the tab out with error 112).</li>
+</ol>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="layers">2. Packages &amp; layering</h2>
+<p>
+Dependencies only point down; <code>@nx/enforce-module-boundaries</code> checks the tags. Each package exposes its crash
+code on a <code>/crash</code> subpath (<code>@fep/protocol/crash</code>, <code>@fep/game-core/crash</code>, …), next to
+the slot code, so a slot game never pulls crash code and vice versa. Shared bits (error classes, money formatting,
+numeric-string schema, session error policy) live at the package root.
+</p>
+<div class="tbl"><table>
+<tr><th>Package</th><th>Tag</th><th>Crash responsibility</th><th>Depends on</th></tr>
+<tr><td><code>apps/games/crashone</code></td><td><span class="pill">type:app</span></td>
+  <td>Boot, launch config, transport choice, Provider A game config, dev mock, layout of lane views</td>
+  <td>all below + <code>@fep/mapper-provider-a</code></td></tr>
+<tr><td><code>@fep/hud/crash</code></td><td><span class="pill react">type:ui</span></td>
+  <td><code>CrashHud</code>, <code>BetSlot</code>, <code>BetList</code>; reads the store, calls session intents</td>
+  <td>game-core, protocol (types)</td></tr>
+<tr><td><code>@fep/renderer/crash</code></td><td><span class="pill pixi">type:renderer</span></td>
+  <td><code>createCrashLaneView</code> and the pure frame / curve math</td><td>game-core (state type), protocol (types)</td></tr>
+<tr><td><code>@fep/game-core/crash</code></td><td><span class="pill core">type:core</span></td>
+  <td>Session (intents, guards, command lifecycle), store, <code>applyCrashEvent</code> reducer, error policy</td>
+  <td>protocol</td></tr>
+<tr><td><code>@fep/protocol/crash</code></td><td><span class="pill core">type:protocol</span></td>
+  <td>Zod schemas of the canonical protocol, <code>CrashTransport</code> type, gateway + mock transports, SSE reader</td>
+  <td>zod</td></tr>
+<tr><td><code>@fep/mapper-provider-a</code> (crash)</td><td><span class="pill">type:mapper</span></td>
+  <td>Provider A native schemas, native → canonical translation, the direct transport</td>
+  <td>protocol only; imported by apps only</td></tr>
+</table></div>
+
+<!-- ============================================================ -->
+<h2 id="boot">3. Boot sequence</h2>
+<p>
+<code>index.html</code> has two siblings: <code>#game</code> (the Pixi canvas) and <code>#root</code> (the React HUD,
+layered on top by <code>styles.css</code>). <code>main.tsx</code> calls <code>bootGame(#game)</code> and only then
+mounts React with the session. <code>start()</code> is fired but not awaited, so the HUD appears immediately and shows
+"Loading…" until init lands.
+</p>
+
+<div class="card diagram">
+<svg viewBox="0 0 1000 770" role="img" aria-label="Boot sequence between main.tsx, bootGame, CrashSession, CrashTransport and the server.">
+  <defs>
+    <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker>
+  </defs>
+  <!-- heads -->
+  <rect class="box" x="20" y="16" width="140" height="44" rx="8"/><text x="90" y="43" text-anchor="middle">main.tsx</text>
+  <rect class="box" x="220" y="16" width="140" height="44" rx="8"/><text x="290" y="43" text-anchor="middle">bootGame (game.ts)</text>
+  <rect class="box core" x="420" y="16" width="140" height="44" rx="8"/><text x="490" y="43" text-anchor="middle">CrashSession</text>
+  <rect class="box core" x="620" y="16" width="140" height="44" rx="8"/><text x="690" y="43" text-anchor="middle">CrashTransport</text>
+  <rect class="box ext" x="820" y="16" width="140" height="44" rx="8"/><text x="890" y="43" text-anchor="middle">Backend</text>
+  <line class="life" x1="90" y1="60" x2="90" y2="760"/>
+  <line class="life" x1="290" y1="60" x2="290" y2="760"/>
+  <line class="life" x1="490" y1="60" x2="490" y2="760"/>
+  <line class="life" x1="690" y1="60" x2="690" y2="760"/>
+  <line class="life" x1="890" y1="60" x2="890" y2="760"/>
+
+  <path class="edge" d="M90,100 L286,100" marker-end="url(#a3)"/><text x="188" y="93" text-anchor="middle" class="small">1. bootGame(#game)</text>
+  <rect class="note" x="165" y="118" width="250" height="26" rx="4"/><text x="290" y="135" text-anchor="middle" class="small">2. readLaunchConfig → createTransport</text>
+  <rect class="note" x="180" y="152" width="220" height="26" rx="4"/><text x="290" y="169" text-anchor="middle" class="small">3. new Application().init(resizeTo)</text>
+  <path class="edge" d="M290,206 L486,206" marker-end="url(#a3)"/><text x="388" y="199" text-anchor="middle" class="small">4. createCrashSession({transport})</text>
+  <path class="edge" d="M290,240 L486,240" marker-end="url(#a3)"/><text x="388" y="233" text-anchor="middle" class="small">5. store.subscribe(…) + start()</text>
+  <path class="edge dash" d="M290,274 L94,274" marker-end="url(#a3)"/><text x="190" y="267" text-anchor="middle" class="small">6. resolves session</text>
+  <rect class="note" x="10" y="290" width="160" height="26" rx="4"/><text x="90" y="307" text-anchor="middle" class="small">7. render HUD: "Loading…"</text>
+  <path class="edge" d="M490,342 L686,342" marker-end="url(#a3)"/><text x="588" y="335" text-anchor="middle" class="small">8. init()</text>
+  <path class="edge" d="M690,376 L886,376" marker-end="url(#a3)"/><text x="788" y="369" text-anchor="middle" class="small">9. init request (per mode)</text>
+  <path class="edge dash" d="M890,410 L694,410" marker-end="url(#a3)"/><text x="792" y="403" text-anchor="middle" class="small">native / canonical init</text>
+  <path class="edge dash" d="M690,444 L494,444" marker-end="url(#a3)"/><text x="592" y="437" text-anchor="middle" class="small">10. CrashInit (canonical)</text>
+  <rect class="note" x="390" y="460" width="200" height="26" rx="4"/><text x="490" y="477" text-anchor="middle" class="small">11. set {phase: ready, init, balance}</text>
+  <path class="edge dash" d="M490,510 L294,510" marker-end="url(#a3)"/><text x="392" y="503" text-anchor="middle" class="small">12. subscriber sees init</text>
+  <rect class="note" x="140" y="526" width="300" height="26" rx="4"/><text x="290" y="543" text-anchor="middle" class="small">createCrashLaneView × capabilities.lanes, layout</text>
+  <path class="edge" d="M490,580 L686,580" marker-end="url(#a3)"/><text x="588" y="573" text-anchor="middle" class="small">13. subscribe(handlers)</text>
+  <path class="edge" d="M690,614 L886,614" marker-end="url(#a3)"/><text x="788" y="607" text-anchor="middle" class="small">14. open SSE (Bearer …)</text>
+  <path class="edge dash" d="M890,648 L694,648" marker-end="url(#a3)"/><text x="792" y="641" text-anchor="middle" class="small">stream</text>
+  <path class="edge dash" d="M690,682 L494,682" marker-end="url(#a3)"/><text x="592" y="675" text-anchor="middle" class="small">15. status live · snapshot first</text>
+  <rect class="note" x="375" y="698" width="230" height="26" rx="4"/><text x="490" y="715" text-anchor="middle" class="small">16. queue → flush → applyCrashEvent</text>
+  <path class="edge dash" d="M490,746 L94,746" marker-end="url(#a3)"/><text x="292" y="739" text-anchor="middle" class="small">17. store change → HUD shows bet slot, Pixi draws</text>
+</svg>
+</div>
+
+<div class="card">
+<ul>
+  <li><strong>Why outside React:</strong> React StrictMode runs effects twice in dev. Booting in an effect would call
+    <code>init()</code> twice. <code>start()</code> also guards itself (<code>started</code> flag), so a second call is a no-op.</li>
+  <li><strong>Lane views wait for init:</strong> the number of lanes comes from <code>init.capabilities.crash.lanes</code>,
+    so the views are built from a one-shot store subscription (it unsubscribes itself on first init).</li>
+  <li><strong>Layout:</strong> lanes sit in one row, scaled down (never up) to fit the screen minus
+    <code>HUD_HEIGHT = 340</code> px reserved for the HUD, recalculated on renderer resize.</li>
+  <li><strong>Boot failure</strong> (bad launch config, Pixi init) rejects <code>bootGame</code>; <code>main.tsx</code>
+    renders the message in a <code>role="alert"</code> paragraph instead of the HUD.</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="launch">4. Launch config &amp; transports</h2>
+<p>
+<code>readLaunchConfig(location.search, env, import.meta.env.DEV)</code> turns the URL the lobby opened plus build env
+into a <code>LaunchConfig</code>; <code>createTransport(config)</code> is the only place that knows which transport
+is behind the game.
+</p>
+<div class="tbl"><table>
+<tr><th>URL</th><th>Mode</th><th>Needs</th><th>Transport</th></tr>
+<tr><td><code>?launchToken=…</code></td><td>gateway</td><td><code>VITE_GATEWAY_URL</code> (or <code>?gatewayUrl=</code>, dev builds only)</td>
+  <td><code>createGatewayCrashTransport({baseUrl, launchToken})</code></td></tr>
+<tr><td><code>?sessionKey=…[&amp;demo=1]</code></td><td>direct</td><td><code>VITE_API_URL</code></td>
+  <td><code>createDirectCrashTransport({...PROVIDER_A_GAME_CONFIG, baseUrl, sessionKey, demo})</code></td></tr>
+<tr><td>nothing</td><td>mock</td><td>a dev build</td><td><code>createDevCrashTransport()</code></td></tr>
+<tr><td>nothing, production build</td><td>—</td><td></td><td>throws "open the game from the lobby"</td></tr>
+</table></div>
+<div class="card note-card">
+<strong>Security detail.</strong> <code>?gatewayUrl=</code> is honoured only in dev builds. In production a crafted link
+could otherwise send the launch token to any host and make the game trust that host's answers. A production build also
+never falls back to the mock, so it can't show fake money.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="protocol">5. The canonical crash protocol</h2>
+<p>
+All Zod schemas in <code>packages/protocol/src/crash/schemas/</code>; types come from <code>z.infer</code>. Money and
+multipliers are numeric strings everywhere; times are server epoch ms. This is what the gateway will speak natively and
+what the direct transport produces from Provider A.
+</p>
+
+<div class="grid2">
+<div class="card">
+<h3 style="margin-top:0">Init — <code>CrashInit</code></h3>
+<pre class="shape"><span class="k">session</span>      { token, expiresAt|null, demo }
+<span class="k">game</span>         { id, provider, family:"crash", clientId }
+<span class="k">money</span>        { balance, currency, decimals }
+<span class="k">bets</span>         { min, max, default }
+<span class="k">capabilities</span>.crash
+  lanes          1 | 3
+  autoCashout    { min } | null
+  curve          {kind:"exp", k} | {kind:"ticks"}
+  liveBets       boolean
+  betWhileRunning "reject" | "nextRound"
+  freeRounds     boolean
+<span class="k">stream</span>       { kind:"sse", url }
+<span class="c">round state is NOT here: it is the stream's snapshot</span></pre>
+</div>
+<div class="card">
+<h3 style="margin-top:0">Commands — <code>CrashCommand</code> → <code>CrashCommandResult</code></h3>
+<pre class="shape"><span class="c">every command: { requestId: uuid, lane: 1|2|3 }</span>
+<span class="k">bet</span>        + bet, autoCashout?
+<span class="k">cancelBet</span>
+<span class="k">cashout</span>
+
+<span class="c">result</span>
+{ balance, bet?: MyBet, cashout?: {multiplier, win} }
+<span class="c">bet → bet · cashout → cashout · cancelBet → balance only</span>
+<span class="c">requestId: gateway answers a repeat with the first</span>
+<span class="c">result, so a retry can never play twice</span></pre>
+</div>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0">Stream events — <code>CrashEvent</code> (every event has <code>seq</code> and <code>serverTime</code>)</h3>
+<div class="tbl" style="margin:8px 0 0"><table>
+<tr><th>Event</th><th>Payload</th><th>Effect in the store</th></tr>
+<tr><td><code>snapshot</code></td><td>lanes[], history, topWins, myBets, balance</td><td>replaces all round data; resets <code>lastSeq</code></td></tr>
+<tr><td><code>roundStart</code></td><td>lane, roundId</td><td>lane reset to <code>starting</code> (keeps a next-round bet)</td></tr>
+<tr><td><code>countdown</code></td><td>endsAt</td><td>phase <code>countdown</code>, <code>countdownEndsAt</code></td></tr>
+<tr><td><code>running</code></td><td>startAt</td><td>phase <code>running</code>, <code>startAt</code></td></tr>
+<tr><td><code>tick</code></td><td>multiplier</td><td><code>multiplier</code></td></tr>
+<tr><td><code>crash</code></td><td>crashPoint</td><td>phase <code>crashed</code>, <code>crashPoint</code> = <code>multiplier</code></td></tr>
+<tr><td><code>history</code></td><td>history, topWins</td><td>replaces both lists</td></tr>
+<tr><td><code>betPlaced</code> / <code>betRemoved</code> / <code>betCashedOut</code></td><td>bet / betId / betId+cashout</td><td>live bets list of the lane</td></tr>
+<tr><td><code>myBetAccepted</code></td><td>bet</td><td>lane <code>myBet</code></td></tr>
+<tr><td><code>myBetSettled</code></td><td>cashout | null</td><td>won: keeps <code>myBet</code> with result; lost: clears it; adds to <code>myBets</code> (max 50)</td></tr>
+<tr><td><code>balance</code></td><td>balance</td><td><code>balance</code></td></tr>
+</table></div>
+<p style="margin:10px 0 0">
+<code>parseCrashEvent(raw)</code> returns <code>null</code> for an unknown <code>type</code> (the server may add types
+before the client knows them: log and skip) and throws a <code>ZodError</code> for a known type with a wrong shape.
+</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="direct">6. Direct mode — Provider A from the browser</h2>
+<p>
+Until the gateway runs Connector A, the browser talks to Provider A directly. <code>createDirectCrashTransport</code>
+(in <code>@fep/mapper-provider-a</code>) turns Provider A's Game API and Mercure hub into the canonical
+<code>CrashTransport</code>, so nothing above it knows the difference.
+</p>
+
+<div class="card diagram">
+<svg viewBox="0 0 1000 800" role="img" aria-label="Direct mode sequence between the crash session, the direct transport, Provider A's Game API and its Mercure hub.">
+  <defs>
+    <marker id="a6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker>
+    <marker id="a6l" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head live"/></marker>
+  </defs>
+  <rect class="box core" x="30" y="16" width="140" height="44" rx="8"/><text x="100" y="43" text-anchor="middle">CrashSession</text>
+  <rect class="box" x="250" y="16" width="160" height="44" rx="8"/><text x="330" y="43" text-anchor="middle">DirectTransport</text>
+  <rect class="box ext" x="510" y="16" width="160" height="44" rx="8"/><text x="590" y="43" text-anchor="middle">Game API</text>
+  <rect class="box ext" x="770" y="16" width="160" height="44" rx="8"/><text x="850" y="43" text-anchor="middle">Mercure hub</text>
+  <line class="life" x1="100" y1="60" x2="100" y2="790"/>
+  <line class="life" x1="330" y1="60" x2="330" y2="790"/>
+  <line class="life" x1="590" y1="60" x2="590" y2="790"/>
+  <line class="life" x1="850" y1="60" x2="850" y2="790"/>
+
+  <path class="edge" d="M100,96 L326,96" marker-end="url(#a6)"/><text x="215" y="89" text-anchor="middle" class="small">init()</text>
+  <path class="edge" d="M330,130 L586,130" marker-end="url(#a6)"/><text x="460" y="123" text-anchor="middle" class="mono">GET /api/v1/game/{sessionKey}</text>
+  <path class="edge dash" d="M590,164 L334,164" marker-end="url(#a6)"/><text x="462" y="157" text-anchor="middle" class="small">fingerprint · server{url, topics, token} · crashInit</text>
+  <path class="edge dash" d="M330,198 L104,198" marker-end="url(#a6)"/><text x="217" y="191" text-anchor="middle" class="small">toCrashInit(native, config)</text>
+
+  <path class="edge" d="M100,240 L326,240" marker-end="url(#a6)"/><text x="215" y="233" text-anchor="middle" class="small">subscribe()</text>
+  <path class="edge live" d="M330,274 L846,274" marker-end="url(#a6l)"/><text x="590" y="267" text-anchor="middle" class="mono">GET {server.url}?topic=public&amp;topic=player · Bearer subscriberToken</text>
+  <path class="edge dash live" d="M850,308 L334,308" marker-end="url(#a6l)"/><text x="592" y="301" text-anchor="middle" class="small">200 text/event-stream → status "live"</text>
+  <path class="edge" d="M330,342 L586,342" marker-end="url(#a6)"/><text x="460" y="335" text-anchor="middle" class="mono">GET /crash/myStats</text>
+  <path class="edge dash" d="M590,376 L334,376" marker-end="url(#a6)"/><text x="462" y="369" text-anchor="middle" class="small">round, state, myBet, bets, history, balance</text>
+  <path class="edge dash" d="M330,410 L104,410" marker-end="url(#a6)"/><text x="217" y="403" text-anchor="middle" class="small">toCrashSnapshot → snapshot</text>
+
+  <path class="edge dash live" d="M850,452 L334,452" marker-end="url(#a6l)"/><text x="592" y="445" text-anchor="middle" class="mono">data: {"type":"tick","multiplier":…}</text>
+  <path class="edge dash" d="M330,486 L104,486" marker-end="url(#a6)"/><text x="217" y="479" text-anchor="middle" class="small">toCrashTick → tick</text>
+  <path class="edge dash live" d="M850,520 L334,520" marker-end="url(#a6l)"/><text x="592" y="513" text-anchor="middle" class="mono">data: {"type":"crash" | "bet_added" | …}</text>
+  <rect class="note" x="200" y="534" width="260" height="26" rx="4"/><text x="330" y="551" text-anchor="middle" class="small">resync in 250 ms (bursts merged) → myStats</text>
+
+  <path class="edge" d="M100,600 L326,600" marker-end="url(#a6)"/><text x="215" y="593" text-anchor="middle" class="small">play({action:"bet"})</text>
+  <path class="edge" d="M330,634 L586,634" marker-end="url(#a6)"/><text x="460" y="627" text-anchor="middle" class="mono">POST /crash/bet {bet, autoCashout, fingerprint}</text>
+  <path class="edge dash" d="M590,668 L334,668" marker-end="url(#a6)"/><text x="462" y="661" text-anchor="middle" class="small">{balance}</text>
+  <path class="edge" d="M100,710 L326,710" marker-end="url(#a6)"/><text x="215" y="703" text-anchor="middle" class="small">play({action:"cashout"})</text>
+  <path class="edge" d="M330,744 L586,744" marker-end="url(#a6)"/><text x="460" y="737" text-anchor="middle" class="mono">POST /crash/push {fingerprint}</text>
+  <path class="edge dash" d="M590,778 L334,778" marker-end="url(#a6)"/><text x="462" y="771" text-anchor="middle" class="small">{multiplier, winAmount, balance}</text>
+</svg>
+</div>
+
+<div class="grid2">
+<div class="card">
+<h3 style="margin-top:0">What the direct transport does</h3>
+<ul>
+  <li><strong>Init</strong> parses <code>nativeCrashInitSchema</code>, keeps <code>fingerprint</code> and
+    <code>server</code> for later, and builds the canonical init from the native balance plus
+    <code>PROVIDER_A_GAME_CONFIG</code> (game id, decimals, bet limits, capabilities — things Provider A doesn't send).</li>
+  <li><strong>Commands</strong>: <code>toNativeCommand</code> maps <code>bet</code>/<code>cancelBet</code>/<code>cashout</code>
+    to <code>/crash/bet</code>, <code>/crash/cancelBet</code>, <code>/crash/push</code>, adds the fingerprint and drops
+    <code>lane</code> (only non-lane games are supported). <code>toCrashCommandResult</code> maps the answer back.</li>
+  <li><strong>Stream</strong>: one SSE connection with both topics as repeated <code>topic</code> params and the
+    subscriber token as a Bearer header — that's why it reads SSE over <code>fetch</code>
+    (<code>subscribeSse</code>) instead of <code>EventSource</code>, which can't send headers.</li>
+</ul>
+</div>
+<div class="card">
+<h3 style="margin-top:0">Why "resync" instead of mapping every event</h3>
+<p style="margin:0">
+Provider A's event payloads aren't documented. Only <code>tick</code> is translated directly. Every other event type
+schedules a <code>/crash/myStats</code> call (250 ms debounce, bursts merged; a call already running gets one
+follow-up) and the result becomes a fresh <code>snapshot</code>. Ticks are dropped until this connection's snapshot is
+out, because a snapshot must always come first. Every time the stream goes live (first connect or reconnect) it
+resyncs. <code>seq</code> is numbered locally and <code>serverTime</code> is the client clock, since Provider A sends
+neither.
+</p>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="gateway">7. Gateway mode — the production path</h2>
+<div class="card">
+<p style="margin-top:0">
+<code>createGatewayCrashTransport</code> is a thin client because the gateway already speaks canonical JSON:
+</p>
+<ul>
+  <li><code>POST /v1/sessions</code> with <code>Authorization: Bearer &lt;launchToken&gt;</code> → <code>CrashInit</code>.
+    The launch token is used only here. The transport keeps <code>session.token</code> and resolves
+    <code>stream.url</code> against the gateway origin.</li>
+  <li><code>POST /v1/play</code> with the session token → <code>CrashCommandResult</code>. The <code>requestId</code>
+    in every command makes retries safe.</li>
+  <li>Stream: <code>subscribeSse</code> on <code>stream.url</code> with the session token; each message goes through
+    <code>parseCrashEvent</code>, unknown types are reported to <code>onError</code> and skipped.</li>
+  <li>Non-2xx answers throw <code>GameApiError(status, {kind: "unexpected", body})</code>.</li>
+</ul>
+<p style="margin-bottom:0">
+<span class="pill warn">not built</span> The gateway service itself doesn't exist yet
+(<a href="multi-provider-gateway.html">multi-provider-gateway.html</a>). The transport is unit tested against a fake
+<code>fetch</code>. Mapping the gateway's canonical error taxonomy is a <code>TODO[techdebt]</code>.
+</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="mock">8. Dev mock — playable without any backend</h2>
+<div class="card">
+<p style="margin-top:0">
+<code>createDevCrashTransport</code> (app <code>dev/</code>) generates a timeline when the page loads and plays it
+through the protocol's <code>createMockCrashTransport</code>, which replays events with <code>setTimeout</code> at their
+<code>serverTime</code> offsets.
+</p>
+<ul>
+  <li>100 rounds: 5 s countdown, flight on <code>m = e^(k·t)</code> with <code>k = ln2 / 7000</code> (doubles every
+    7 s, so it uses the <code>exp</code> curve), ticks every 100 ms, 3 s pause. Crash points follow
+    <code>0.99 / (1 − r)</code>, capped at 50×; 2–4 fake players bet and some cash out.</li>
+  <li><code>play()</code> answers against the same clock: bet only before <code>startAt</code>, one bet per round,
+    balance checked (error 3), cash-out only while flying, paid at the formula's multiplier.</li>
+  <li><span class="pill warn">limits</span> one lane, no auto cash-out, no <code>myBetSettled</code> (a lost bet clears at
+    the next round), reload after 100 rounds.</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="pipeline">9. Event pipeline — from bytes to pixels</h2>
+
+<div class="card diagram">
+<svg viewBox="0 0 1000 360" role="img" aria-label="Event pipeline: SSE bytes, readSseMessages, parse, onEvent, queue, flush, applyCrashEvent, store, then HUD and Pixi consumers.">
+  <defs>
+    <marker id="a9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker>
+  </defs>
+  <rect class="box ext" x="20" y="20" width="210" height="64" rx="8"/><text x="125" y="46" text-anchor="middle">SSE response body</text><text x="125" y="66" text-anchor="middle" class="sub">fetch + ReadableStream</text>
+  <rect class="box" x="265" y="20" width="210" height="64" rx="8"/><text x="370" y="46" text-anchor="middle">readSseMessages</text><text x="370" y="66" text-anchor="middle" class="sub">{id, data}; comments skipped</text>
+  <rect class="box" x="510" y="20" width="210" height="64" rx="8"/><text x="615" y="46" text-anchor="middle">parse → CrashEvent</text><text x="615" y="66" text-anchor="middle" class="sub">parseCrashEvent | mapper</text>
+  <rect class="box core" x="755" y="20" width="225" height="64" rx="8"/><text x="867" y="46" text-anchor="middle">handlers.onEvent</text><text x="867" y="66" text-anchor="middle" class="sub">push [event, Date.now()]</text>
+  <path class="edge" d="M230,52 L262,52" marker-end="url(#a9)"/>
+  <path class="edge" d="M475,52 L507,52" marker-end="url(#a9)"/>
+  <path class="edge" d="M720,52 L752,52" marker-end="url(#a9)"/>
+
+  <rect class="box core" x="755" y="130" width="225" height="64" rx="8"/><text x="867" y="156" text-anchor="middle">queue</text><text x="867" y="176" text-anchor="middle" class="sub">first event schedules flush</text>
+  <rect class="box core" x="510" y="130" width="210" height="64" rx="8"/><text x="615" y="156" text-anchor="middle">flush (setTimeout 16)</text><text x="615" y="176" text-anchor="middle" class="sub">drains in hidden tabs too</text>
+  <rect class="box core" x="265" y="130" width="210" height="64" rx="8"/><text x="370" y="156" text-anchor="middle">applyCrashEvent fold</text><text x="370" y="176" text-anchor="middle" class="sub">pure, per event</text>
+  <rect class="box core" x="20" y="130" width="210" height="64" rx="8"/><text x="125" y="156" text-anchor="middle">store.setState</text><text x="125" y="176" text-anchor="middle" class="sub">once per burst</text>
+  <path class="edge" d="M867,84 L867,127" marker-end="url(#a9)"/>
+  <path class="edge" d="M755,162 L723,162" marker-end="url(#a9)"/>
+  <path class="edge" d="M510,162 L478,162" marker-end="url(#a9)"/>
+  <path class="edge" d="M265,162 L233,162" marker-end="url(#a9)"/>
+
+  <rect class="box react" x="20" y="250" width="440" height="90" rx="8"/>
+  <text x="40" y="276">HUD (React)</text>
+  <text x="40" y="296" class="sub">useCrashHudState: shallow-equal frame fields + laneIds string</text>
+  <text x="40" y="313" class="sub">BetSlot: one lane's state → only that slot re-renders on a tick</text>
+  <text x="40" y="330" class="sub">live bets: arrays keep identity → re-render on bet events only</text>
+  <rect class="box pixi" x="540" y="250" width="440" height="90" rx="8"/>
+  <text x="560" y="276">Lane view (Pixi)</text>
+  <text x="560" y="296" class="sub">store.subscribe: new multiplier → TickInterpolator.push(value, now)</text>
+  <text x="560" y="313" class="sub">ticker, every frame: getState() → toCrashFrame → draw</text>
+  <text x="560" y="330" class="sub">serverNow = Date.now() + clockOffsetMs</text>
+  <path class="edge" d="M125,194 L125,247" marker-end="url(#a9)"/>
+  <path class="edge" d="M200,194 C300,230 640,210 700,247" marker-end="url(#a9)"/>
+</svg>
+</div>
+<div class="card">
+<p style="margin:0">
+Batching matters because a ticks-only provider can send many events per frame and a reconnect can deliver a burst.
+The queue keeps each event's arrival time; the reducer uses it to estimate the server clock offset. The flush uses
+<code>setTimeout(16)</code>, not <code>requestAnimationFrame</code>, on purpose: rAF stops in a hidden tab, and the queue
+would grow without bound until the tab came back.
+</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="store">10. Store &amp; reducer</h2>
+<div class="grid2">
+<div class="card">
+<h3 style="margin-top:0"><code>CrashState</code></h3>
+<pre class="shape"><span class="k">phase</span>          "loading" | "ready" | "over"
+<span class="k">connection</span>     "connecting" | "live" | "reconnecting" | "offline"
+<span class="k">init</span>           CrashInit | null
+<span class="k">lanes</span>          { 1?, 2?, 3?: CrashLaneState }
+  <span class="c">LaneState from the snapshot +</span>
+  pending       "bet" | "cancelBet" | "cashout" | null
+<span class="k">history</span>        RoundResult[]
+<span class="k">topWins</span>        CrashBet[]
+<span class="k">myBets</span>         MyBetRecord[]   <span class="c">newest first, ≤ 50</span>
+<span class="k">balance</span>        string | null
+<span class="k">lastSeq</span>        number          <span class="c">-1 before first snapshot</span>
+<span class="k">clockOffsetMs</span>  number | null    <span class="c">server − client</span>
+<span class="k">error</span>          SessionError | null</pre>
+</div>
+<div class="card">
+<h3 style="margin-top:0"><code>applyCrashEvent(state, event, receivedAt)</code></h3>
+<ul style="margin:0">
+  <li><strong>Dedupe:</strong> any non-snapshot event with <code>seq ≤ lastSeq</code> is a repeat after a reconnect and
+    is ignored. A snapshot always applies and resets <code>lastSeq</code>, so a new connection is always accepted.</li>
+  <li><strong>Clock offset:</strong> sample <code>serverTime − receivedAt</code>; keep the <em>largest</em>. Delivery
+    delay only makes the sample smaller than the true offset, so the max is the best estimate.</li>
+  <li><strong>Snapshot</strong> replaces lanes, history, top wins, my bets and balance, but keeps each lane's
+    <code>pending</code> command, so a reconnect during a bet doesn't unlock the button.</li>
+  <li><strong>Missed round start:</strong> an event for a <code>roundId</code> the lane hasn't seen starts that round
+    first (<code>startLaneRound</code>), then applies.</li>
+  <li><strong>Unknown lanes</strong> (not in the snapshot) are ignored.</li>
+</ul>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="round">11. Round lifecycle (per lane)</h2>
+
+<div class="card diagram">
+<svg viewBox="0 0 1000 330" role="img" aria-label="Round state machine: starting, countdown, running, crashed, and back to starting on roundStart, with allowed intents per phase.">
+  <defs>
+    <marker id="a11" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker>
+  </defs>
+  <rect class="box" x="30" y="50" width="190" height="70" rx="35"/><text x="125" y="80" text-anchor="middle">starting</text><text x="125" y="100" text-anchor="middle" class="sub">multiplier 1.00</text>
+  <rect class="box core" x="280" y="50" width="190" height="70" rx="35"/><text x="375" y="80" text-anchor="middle">countdown</text><text x="375" y="100" text-anchor="middle" class="sub">countdownEndsAt</text>
+  <rect class="box react" x="530" y="50" width="190" height="70" rx="35"/><text x="625" y="80" text-anchor="middle">running</text><text x="625" y="100" text-anchor="middle" class="sub">startAt, ticks</text>
+  <rect class="box bad" x="780" y="50" width="190" height="70" rx="35"/><text x="875" y="80" text-anchor="middle">crashed</text><text x="875" y="100" text-anchor="middle" class="sub">crashPoint</text>
+
+  <path class="edge" d="M220,85 L277,85" marker-end="url(#a11)"/><text x="249" y="40" text-anchor="middle" class="mono">countdown</text>
+  <path class="edge" d="M470,85 L527,85" marker-end="url(#a11)"/><text x="499" y="40" text-anchor="middle" class="mono">running</text>
+  <path class="edge" d="M720,85 L777,85" marker-end="url(#a11)"/><text x="749" y="40" text-anchor="middle" class="mono">crash</text>
+  <path class="edge" d="M875,120 C875,190 125,190 125,123" marker-end="url(#a11)"/>
+  <text x="500" y="200" text-anchor="middle" class="mono">roundStart (new roundId) → startLaneRound: reset lane, keep a next-round bet and pending</text>
+
+  <text x="125" y="252" text-anchor="middle" class="small">intents: none</text>
+  <text x="125" y="270" text-anchor="middle" class="sub">(bet if betWhileRunning = nextRound)</text>
+  <text x="375" y="252" text-anchor="middle" class="small">bet · cancelBet</text>
+  <text x="375" y="270" text-anchor="middle" class="sub">one bet per lane per round</text>
+  <text x="625" y="252" text-anchor="middle" class="small">cashout</text>
+  <text x="625" y="270" text-anchor="middle" class="sub">own bet, this round, not cashed out</text>
+  <text x="875" y="252" text-anchor="middle" class="small">intents: none</text>
+  <text x="875" y="270" text-anchor="middle" class="sub">a won bet stays shown until next round</text>
+  <text x="500" y="312" text-anchor="middle" class="sub">Phases come only from server events (or a snapshot). The client never moves a lane on its own clock.</text>
+</svg>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="session">12. Session &amp; intents</h2>
+<p>
+<code>createCrashSession</code> is the only thing that writes the store and calls the transport. Each intent returns
+<code>Promise&lt;boolean&gt;</code>: <code>false</code> means "not allowed now, nothing was sent"; <code>true</code>
+means a command was sent (its failure shows as an error, not as <code>false</code>).
+</p>
+<div class="tbl"><table>
+<tr><th>Intent</th><th>Allowed when (on top of <code>readyLane</code>)</th><th>On success</th></tr>
+<tr><td><code>bet(lane, amount, autoCashout?)</code></td>
+  <td>lane in <code>countdown</code> (any phase if <code>betWhileRunning: "nextRound"</code>), no <code>myBet</code>,
+  <code>isAllowedBet</code>: numeric amount within <code>bets.min…max</code>; auto cash-out only if the provider has it
+  and ≥ its <code>min</code></td><td>balance; <code>myBet</code> from the result</td></tr>
+<tr><td><code>cancelBet(lane)</code></td><td>lane in <code>countdown</code> with a <code>myBet</code></td><td>balance; <code>myBet = null</code></td></tr>
+<tr><td><code>cashout(lane)</code></td><td>lane <code>running</code>, <code>myBet</code> for this <code>roundId</code>, not cashed out yet</td>
+  <td>balance; <code>myBet.cashout</code> = server's multiplier and win</td></tr>
+<tr><td><code>dismissError()</code></td><td>session not <code>over</code></td><td><code>error = null</code></td></tr>
+</table></div>
+<div class="card">
+<p style="margin:0">
+<strong><code>readyLane(lane)</code></strong> is the common gate: session <code>ready</code>, connection <code>live</code>, no
+open error, the lane exists and has no command <code>pending</code>. <code>send()</code> sets <code>pending</code>,
+awaits <code>transport.play</code>, writes the balance and the lane patch, and clears <code>pending</code> on success
+and on failure. <code>pending</code> drives the "Sending…" button and blocks double clicks. Every command gets a fresh
+<code>requestId</code> (<code>crypto.randomUUID()</code>, injectable for tests, like <code>now</code> and
+<code>scheduleFlush</code>).
+</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="errors">13. Errors &amp; connection</h2>
+<div class="tbl"><table>
+<tr><th>Source</th><th>Level</th><th>What the player sees</th></tr>
+<tr><td>Init fails (any reason)</td><td><span class="pill bad">CRITICAL</span></td><td>phase <code>over</code> → "Session over" dialog with Reload</td></tr>
+<tr><td>Command fails with an API error code</td><td>from the shared code → level table</td>
+  <td>WARNING: <code>onWarning</code> (console) · ALERT: dialog with OK · CRITICAL: session over</td></tr>
+<tr><td>Command fails without a code (network, unreadable body)</td><td><span class="pill warn">ALERT</span></td>
+  <td>dialog with OK. Not CRITICAL as in slots: the <code>requestId</code> makes a retry safe and the stream reports
+  what really happened to the bet (<code>toCrashSessionError</code>).</td></tr>
+<tr><td>Stream drop / 5xx</td><td>—</td><td>"Reconnecting…" banner; <code>subscribeSse</code> retries after 1 s, 2 s, 5 s, 5 s… with
+  <code>Last-Event-ID</code>; intents are blocked until <code>live</code></td></tr>
+<tr><td>Stream 401 / 403 / 404</td><td><span class="pill bad">CRITICAL</span></td><td>status <code>offline</code> → session over "Connection refused"</td></tr>
+<tr><td>Malformed / unknown event</td><td>—</td><td>skipped, sent to <code>onStreamError</code> (console)</td></tr>
+</table></div>
+
+<!-- ============================================================ -->
+<h2 id="render">14. Rendering the multiplier</h2>
+<div class="grid2">
+<div class="card">
+<h3 style="margin-top:0">Per frame — <code>toCrashFrame</code></h3>
+<ul style="margin:0">
+  <li><code>starting</code>: 1.00, nothing drawn but the caption "Next round".</li>
+  <li><code>countdown</code>: 1.00 and <code>countdownEndsAt − serverNow</code> → "Starts in 3.2s".</li>
+  <li><code>running</code> with an <code>exp</code> curve: <code>e^(k·elapsed)</code> from <code>startAt</code>, never
+    below the last tick — the tick floor corrects a wrong clock offset.</li>
+  <li><code>running</code>, ticks only: the interpolated value, else the last tick.</li>
+  <li><code>crashed</code>: the crash point, in red.</li>
+</ul>
+</div>
+<div class="card">
+<h3 style="margin-top:0">Smoothness helpers</h3>
+<ul style="margin:0">
+  <li><code>TickInterpolator</code>: draws one tick behind, easing from the previous tick to the latest over the gap
+    between them. Smooth, and never shows a value the server hasn't sent.</li>
+  <li><code>CurveTrace</code>: keeps one point per 50 ms plus a provisional head point that moves every frame, so the
+    tip is exact without the list growing at frame rate.</li>
+  <li><code>curveViewport</code>: auto-zoom from 8 s × 2× upward, keeping the head at about 80% of each axis.</li>
+  <li>Cash-out marker: the first trace point at or above the server's cash-out multiplier.</li>
+</ul>
+</div>
+</div>
+<div class="card note-card">
+<span class="pill warn">placeholder art</span> The lane view is a line, a dot, a big number and a caption on a 720×405
+panel. Game art (Spine object, particles) per crash game is still to come. Pixi scene files are excluded from the
+coverage floor; the math they call (<code>toCrashFrame</code>, interpolator, trace, viewport, screen mapping) is unit tested.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="hud">15. HUD</h2>
+<div class="card">
+<ul>
+  <li><strong>Frame</strong> (<code>CrashHud</code>): balance, recent crash points (≥ 2× highlighted), a "Connecting… /
+    Reconnecting…" banner while not live, one <code>BetSlot</code> per lane, live bets (only if
+    <code>capabilities.liveBets</code>), top wins (only if any), and the error <code>Dialog</code>. Before init it shows
+    "Loading…" with <code>aria-busy</code>.</li>
+  <li><strong><code>canAct</code></strong> = session ready ∧ stream live ∧ no error. It gates every button and input.</li>
+  <li><strong>One button per lane</strong>, its action following the round:
+    <code>Sending…</code> (pending) → <code>Cashed out $X</code> → <code>Cancel</code> (countdown with a bet) →
+    <code>Cash out $amount×multiplier</code> (running, bet for this round) → <code>Waiting for round</code> →
+    <code>Bet $X</code> / <code>Wait for next round</code>. The bet button is enabled only when
+    <code>isAllowedBet</code> passes, the same check the session uses.</li>
+  <li><strong>Inputs</strong>: amount (defaults to <code>bets.default</code>) and auto cash-out (default 2.00, shown only
+    if the provider supports it). Editable only with no bet and nothing pending.</li>
+  <li><strong>Money</strong> is formatted with <code>formatMoney</code> using the init currency and decimals; the cash-out
+    preview uses decimal-string multiplication, not floats.</li>
+  <li><span class="pill warn">i18n</span> strings are inline English until <code>packages/i18n</code> lands.</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="files">16. File map</h2>
+<div class="tbl"><table>
+<tr><th>Where</th><th>Files</th></tr>
+<tr><td><code>apps/games/crashone/src</code></td><td>
+  <code>main.tsx</code> · <code>game.ts</code> (bootGame) · <code>app/app.tsx</code> ·
+  <code>launch/read-launch-config.ts</code>, <code>create-transport.ts</code>, <code>types/</code> ·
+  <code>config/provider-a-game-config.ts</code> · <code>dev/create-dev-crash-transport.ts</code> ·
+  <code>styles.css</code></td></tr>
+<tr><td><code>apps/games/crashone/scripts</code></td><td><code>mercure-stub.mjs</code> — local SSE hub for the Postman mock (<code>bun run mock:mercure</code>)</td></tr>
+<tr><td><code>packages/protocol/src/crash</code></td><td>
+  <code>schemas/</code> (init, capabilities, curve, command, result, event, lane state, bets, cashout, history) ·
+  <code>transport/</code> gateway + mock · <code>utils/</code> <code>subscribe-sse</code>, <code>read-sse-messages</code>,
+  <code>parse-crash-event</code> · <code>types/</code></td></tr>
+<tr><td><code>packages/game-core/src</code></td><td>
+  <code>crash/session/create-crash-session.ts</code> · <code>crash/reducers/apply-crash-event.ts</code> ·
+  <code>crash/utils/</code> is-allowed-bet, start-lane-round, to-crash-session-error ·
+  <code>store/create-crash-store.ts</code>, <code>constants/initial-crash-state.ts</code>, <code>types/crash-*.type.ts</code></td></tr>
+<tr><td><code>packages/renderer/src/crash</code></td><td>
+  <code>scene/create-crash-lane-view.ts</code> · <code>motion/</code> curve-trace, tick-interpolator ·
+  <code>utils/</code> to-crash-frame, multiplier-at, curve-viewport, to-screen-point</td></tr>
+<tr><td><code>packages/hud/src</code></td><td>
+  <code>crash/crash-hud.tsx</code>, <code>bet-slot.tsx</code>, <code>bet-list.tsx</code>, <code>crash-hud.module.css</code> ·
+  <code>store/use-crash-hud-state.ts</code> · <code>common/components/dialog.tsx</code>, <code>common/utils/money.ts</code></td></tr>
+<tr><td><code>packages/mappers/provider-a/src/crash</code></td><td>
+  <code>transport/create-direct-crash-transport.ts</code> · <code>schemas/</code> native init, myStats, event, push,
+  balance, amount, id, time · <code>utils/</code> to-crash-init, -snapshot, -tick, -command-result, to-native-command ·
+  <code>config/state-to-phase.ts</code></td></tr>
+</table></div>
+
+<!-- ============================================================ -->
+<h2 id="testing">17. Testing</h2>
+<div class="card">
+<p style="margin-top:0">26 spec files sit next to the code they test (Vitest; React Testing Library for the HUD and app):</p>
+<ul>
+  <li><strong>protocol</strong>: command / event / init schemas, <code>parseCrashEvent</code>, <code>readSseMessages</code>,
+    gateway transport (fake fetch), mock transport.</li>
+  <li><strong>game-core</strong>: <code>applyCrashEvent</code>, <code>createCrashSession</code> (fake transport, injected
+    clock / ids / flush), <code>toCrashSessionError</code>.</li>
+  <li><strong>renderer</strong>: <code>toCrashFrame</code>, <code>multiplierAt</code>, <code>curveViewport</code>,
+    <code>TickInterpolator</code>, <code>CurveTrace</code>.</li>
+  <li><strong>hud</strong>: <code>CrashHud</code>. <strong>mapper</strong>: direct transport, snapshot / tick / command
+    mapping, <code>myStats</code> schema, against hand-written payloads in <code>tests/native-examples.ts</code>
+    (Provider A has published no JSON examples).</li>
+  <li><strong>app</strong>: <code>App</code>, <code>readLaunchConfig</code>, <code>createTransport</code>, dev transport.</li>
+</ul>
+<p style="margin-bottom:0">Coverage floor 80% per project; Pixi scene files excluded. Network is mocked at the
+transport / <code>fetch</code> boundary, time and ids are injected. No E2E test for a crash round yet.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="run">18. Running it</h2>
+<div class="tbl"><table>
+<tr><th>Mode</th><th>How</th><th>What you get</th></tr>
+<tr><td>Dev mock</td><td><code>bun run serve:crashone</code> → <code>http://localhost:4310/</code></td>
+  <td>Full playable loop, 100 generated rounds, $1000 demo balance</td></tr>
+<tr><td>Postman mock (direct)</td><td><code>apps/games/crashone/.env.local</code>:
+  <code>VITE_API_URL=https://42cb5436-0184-4d10-896e-c71cd9c47f8e.mock.pstmn.io</code>, then
+  <code>bun run mock:mercure</code> + <code>bun run serve:crashone</code> →
+  <code>?sessionKey=crash-demo</code></td>
+  <td>Real direct-transport code path against fixed responses: one round (88) looping 1.37× → 3.10×, cash-out always 1.37×</td></tr>
+<tr><td>Provider A (direct)</td><td><code>VITE_API_URL</code> = Provider A, open with <code>?sessionKey=…</code> from a real launch</td>
+  <td>Real money/demo session; capabilities and limits from <code>PROVIDER_A_GAME_CONFIG</code></td></tr>
+<tr><td>Gateway</td><td><code>VITE_GATEWAY_URL</code>, <code>?launchToken=…</code></td><td>Needs the gateway service (not built)</td></tr>
+</table></div>
+
+<!-- ============================================================ -->
+<h2 id="gaps">19. Gaps &amp; risks</h2>
+<div class="tbl"><table>
+<tr><th>Area</th><th>Gap</th><th>Where</th><th>Impact / next step</th></tr>
+<tr><td>Provider A states</td><td><code>state</code> values are guesses; an unknown one throws when building the snapshot</td>
+  <td><code>config/state-to-phase.ts</code></td><td>Fails loudly by design. Confirm the real list with Provider A.</td></tr>
+<tr><td>Provider A events</td><td>Only <code>tick</code> mapped; the rest trigger a myStats resync</td>
+  <td><code>create-direct-crash-transport.ts</code></td><td>Extra HTTP calls; bet list and round changes lag ~250 ms. Map each event once payloads are documented.</td></tr>
+<tr><td>Provider A clock</td><td>No server time: offset is 0, <code>startAt</code> format guessed (epoch ms or ISO)</td>
+  <td><code>native-time.schema.ts</code>, transport</td><td>Countdown can be off by the client's clock error; ticks-only curve isn't affected.</td></tr>
+<tr><td>Provider A config</td><td>Game id, bet limits and capabilities are placeholders</td><td><code>config/provider-a-game-config.ts</code></td>
+  <td>Client-side bet limits may not match the server's; the server still rejects.</td></tr>
+<tr><td>Provider A lists</td><td><code>topWins</code> / <code>myBetsList</code> shapes undocumented → sent empty</td><td><code>to-crash-snapshot.ts</code></td><td>No top wins or my-bets history in direct mode.</td></tr>
+<tr><td>Lanes in direct mode</td><td><code>lane</code> is dropped; lane-keyed myStats not parsed</td><td><code>to-native-command.ts</code>, <code>my-stats.schema.ts</code></td><td>3-lane Provider A games don't work direct; the rest of the stack supports 3 lanes.</td></tr>
+<tr><td>Gateway</td><td>Service not built; error taxonomy not mapped</td><td><code>create-gateway-crash-transport.ts</code></td><td>Production path untested end to end.</td></tr>
+<tr><td>Clock offset</td><td>Max-sample estimate never decreases</td><td><code>apply-crash-event.ts</code></td><td>A server clock stepping back isn't followed until a new session.</td></tr>
+<tr><td>Art &amp; i18n</td><td>Placeholder Pixi look; English inline</td><td>renderer scene, HUD</td><td>Expected; per-game art and <code>@fep/i18n</code> to come.</td></tr>
+<tr><td>Dev mock</td><td>No auto cash-out, no settle events, finite timeline</td><td><code>dev/create-dev-crash-transport.ts</code></td><td>Script more when a feature needs to be seen.</td></tr>
+<tr><td>E2E</td><td>No Playwright smoke for a crash round</td><td>—</td><td>The Postman mock + Mercure stub make one feasible.</td></tr>
+</table></div>
+
+<footer>
+Generated from the code on 2026-11-26 (commits up to <code>6128e32</code>). If this page and the code disagree, the
+code wins — update this page. Related: <a href="crash-architecture.html">crash-architecture.html</a> (design &amp;
+roadmap), <a href="crash-api.md">crash-api.md</a> (Provider A API), <a href="multi-provider-gateway.html">multi-provider-gateway.html</a>,
+<a href="frontend-architecture.html">frontend-architecture.html</a>.
+</footer>
+</main>
+</body>
+</html>

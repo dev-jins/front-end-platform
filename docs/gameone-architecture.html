@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Game One Architecture</title>
+<style>
+:root{
+  --bg:#f7f7f5; --surface:#ffffff; --ink:#1b1d21; --ink-2:#555b66; --line:#d9dbe0;
+  --accent:#2f5bd3; --accent-soft:#e6edfc; --ok:#1f8a4c; --ok-soft:#e3f4ea;
+  --warn:#a86300; --warn-soft:#fbf0dc; --bad:#c2352b; --bad-soft:#fbe5e3;
+  --violet:#7a4cc2; --violet-soft:#efe8fa;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#121417; --surface:#1b1e23; --ink:#e8eaed; --ink-2:#a2a8b3; --line:#30353d;
+    --accent:#7aa2ff; --accent-soft:#1f2a44; --ok:#5cc98a; --ok-soft:#173022;
+    --warn:#e6a64a; --warn-soft:#352812; --bad:#ff7b70; --bad-soft:#3a1a18;
+    --violet:#b893f5; --violet-soft:#2a2140;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121417; --surface:#1b1e23; --ink:#e8eaed; --ink-2:#a2a8b3; --line:#30353d;
+  --accent:#7aa2ff; --accent-soft:#1f2a44; --ok:#5cc98a; --ok-soft:#173022;
+  --warn:#e6a64a; --warn-soft:#352812; --bad:#ff7b70; --bad-soft:#3a1a18;
+  --violet:#b893f5; --violet-soft:#2a2140;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+main{max-width:1080px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:28px;margin:0 0 4px}
+h2{font-size:20px;margin:48px 0 6px;padding-top:8px;border-top:1px solid var(--line)}
+h3{font-size:15px;margin:20px 0 6px}
+p.lead{color:var(--ink-2);margin:0 0 20px;max-width:780px}
+p{max-width:820px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em;background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 8px}
+nav a{font-size:13px;text-decoration:none;border:1px solid var(--line);background:var(--surface);padding:4px 10px;border-radius:999px}
+nav a:hover{border-color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
+.card ul,.card ol{padding-left:20px;margin:6px 0}
+.card li{margin:4px 0}
+.diagram{overflow-x:auto}
+.diagram svg{display:block;width:100%;min-width:720px;height:auto}
+svg text{fill:var(--ink);font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+svg .sub{fill:var(--ink-2);font-size:11.5px}
+svg .mono{font-family:var(--mono);font-size:11.5px}
+svg .small{font-size:11.5px}
+svg .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+svg .box.core{fill:var(--accent-soft);stroke:var(--accent)}
+svg .box.react{fill:var(--ok-soft);stroke:var(--ok)}
+svg .box.pixi{fill:var(--violet-soft);stroke:var(--violet)}
+svg .box.warn{fill:var(--warn-soft);stroke:var(--warn)}
+svg .box.bad{fill:var(--bad-soft);stroke:var(--bad)}
+svg .box.ext{stroke-dasharray:5 4}
+svg .note{fill:var(--warn-soft);stroke:var(--warn);stroke-width:1}
+svg .frame{fill:none;stroke:var(--ink-2);stroke-width:1.2;stroke-dasharray:6 5}
+svg .life{stroke:var(--line);stroke-width:1.5;stroke-dasharray:4 4}
+svg .edge{stroke:var(--ink-2);stroke-width:1.5;fill:none}
+svg .edge.dash{stroke-dasharray:5 4}
+svg .edge.live{stroke:var(--warn)}
+svg .edge.core{stroke:var(--accent)}
+svg .head{fill:var(--ink-2)}
+svg .head.live{fill:var(--warn)}
+svg .head.core{fill:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2)}
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;margin:12px 0}
+.shape{font-family:var(--mono);font-size:12.5px;line-height:1.7;white-space:pre;overflow-x:auto;margin:0}
+.shape .c{color:var(--ink-2)} .shape .k{color:var(--accent);font-weight:600}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;margin-right:4px;white-space:nowrap}
+.pill.react{background:var(--ok-soft);color:var(--ok)}
+.pill.pixi{background:var(--violet-soft);color:var(--violet)}
+.pill.core{background:var(--accent-soft);color:var(--accent)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.verdict{border-left:4px solid var(--accent)}
+.note-card{border-left:4px solid var(--warn)}
+.bad-card{border-left:4px solid var(--bad)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.grid2 .card{margin:0}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}
+footer{margin-top:48px;color:var(--ink-2);font-size:13px}
+</style>
+</head>
+<body>
+<main>
+
+<h1>Game One — architecture as built</h1>
+<p class="lead">
+How <code>apps/games/gameone</code>, the reference slot client, works today: from the launch URL to reels landing on
+screen, every package it pulls in, the request → present → commit loop, and what is still a placeholder. This describes
+the code as of 2026-11-26. The client-wide design is in <a href="frontend-architecture.html">frontend-architecture.html</a>;
+the Game Front API is in <a href="index.html">index.html</a> and <a href="Test%20Game%20Front%20API.md">Test Game Front API.md</a>.
+The crash counterpart is <a href="crashone-architecture.html">crashone-architecture.html</a>.
+</p>
+
+<nav>
+  <a href="#picture">1. Full picture</a>
+  <a href="#layers">2. Packages &amp; layering</a>
+  <a href="#boot">3. Boot sequence</a>
+  <a href="#launch">4. Launch &amp; transports</a>
+  <a href="#api">5. Game API contract</a>
+  <a href="#transport">6. HTTP transport &amp; errors</a>
+  <a href="#store">7. Store</a>
+  <a href="#round">8. A spin, end to end</a>
+  <a href="#phases">9. Phases &amp; the nextStep loop</a>
+  <a href="#session">10. Session &amp; intents</a>
+  <a href="#adapter">11. State adapters</a>
+  <a href="#errors">12. Errors</a>
+  <a href="#render">13. Rendering the reels</a>
+  <a href="#hud">14. HUD</a>
+  <a href="#special">15. Special flows</a>
+  <a href="#vs">16. Slot vs crash</a>
+  <a href="#files">17. File map</a>
+  <a href="#testing">18. Testing</a>
+  <a href="#run">19. Running it</a>
+  <a href="#gaps">20. Gaps &amp; risks</a>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="picture">1. The full picture</h2>
+<p>
+Game One is a Vite + React app with two views over one store: a <strong>React HUD</strong> (balance, win, bet
+selector, spin button, dialogs) and a <strong>Pixi scene</strong> (reels and win lines). Neither view calls the API.
+The <strong>slot session</strong> in <code>@fep/game-core/slot</code> owns the store, sends requests through a
+<code>SlotTransport</code>, and asks the scene to <em>present</em> each result before committing it, so the balance
+and win on screen never run ahead of the reels.
+</p>
+
+<div class="card diagram">
+<svg viewBox="0 0 1000 640" role="img" aria-label="Game One layers: lobby opens the app; HUD and Pixi scene read the store owned by the slot session; the scene presents rounds for the session; the session uses SlotTransport, implemented by the HTTP transport to the Game API or by the dev mock.">
+  <defs>
+    <marker id="b1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker>
+    <marker id="b1c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head core"/></marker>
+    <marker id="b1l" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head live"/></marker>
+  </defs>
+
+  <rect class="box ext" x="20" y="20" width="200" height="64" rx="8"/>
+  <text x="120" y="46" text-anchor="middle">Lobby (iframe host)</text>
+  <text x="120" y="66" text-anchor="middle" class="sub">?sessionKey=</text>
+  <path class="edge" d="M220,52 L256,52" marker-end="url(#b1)"/>
+
+  <rect class="box" x="260" y="16" width="720" height="72" rx="8"/>
+  <text x="280" y="42">apps/games/gameone  <tspan class="sub">— type:app, port 4300</tspan></text>
+  <text x="280" y="62" class="sub">main.tsx (React root) · game.ts bootGame() + createTransportFactory()</text>
+  <text x="280" y="78" class="sub">dev/createMockTransport · app/App → &lt;SlotHud&gt; · standardStateAdapter</text>
+
+  <rect class="box react" x="40" y="130" width="420" height="84" rx="8"/>
+  <text x="60" y="156">@fep/hud/slot — SlotHud <tspan class="sub">(React, #root)</tspan></text>
+  <text x="60" y="176" class="sub">balance · win · bet − / + · Spin · Buy bonus (opt-in)</text>
+  <text x="60" y="194" class="sub">error Dialog · tournament start / winner popups</text>
+
+  <rect class="box pixi" x="540" y="130" width="420" height="84" rx="8"/>
+  <text x="560" y="156">@fep/renderer/slot — createSlotScene <tspan class="sub">(Pixi, #game)</tspan></text>
+  <text x="560" y="176" class="sub">ReelSetMotion / ReelMotion · win lines (winLineCells)</text>
+  <text x="560" y="194" class="sub">connectSpinView: phase → start / land reels</text>
+
+  <rect class="box core" x="140" y="276" width="720" height="96" rx="8"/>
+  <text x="160" y="302">@fep/game-core/slot — createSlotSession&lt;S&gt;</text>
+  <text x="160" y="322" class="sub">intents: spin(bet) · buy(bet) · bonus(variant) · openFieldItem(col,row) · next() · dismissError() · dismissPopup()</text>
+  <text x="160" y="340" class="sub">store: zustand SlotState&lt;S&gt; — phase, init, displayed, pending, balance, popups, error · fingerprint kept private</text>
+  <text x="160" y="358" class="sub">play: request → present(round) → commit · run: follows nextStep while it is freespin / respin / avalanche</text>
+
+  <path class="edge core" d="M200,276 L200,216" marker-end="url(#b1c)"/>
+  <text x="208" y="250" class="small">useStore selectors</text>
+  <path class="edge" d="M330,216 L330,274" marker-end="url(#b1)"/>
+  <text x="338" y="250" class="small">intents</text>
+  <path class="edge core" d="M640,276 L640,216" marker-end="url(#b1c)"/>
+  <text x="648" y="250" class="small">phase changes</text>
+  <path class="edge" d="M820,216 L820,274" marker-end="url(#b1)"/>
+  <path class="edge" d="M800,274 L800,218" marker-end="url(#b1)"/>
+  <text x="828" y="242" class="small">present(round)</text>
+  <text x="828" y="258" class="small">resolves on land</text>
+
+  <rect class="box core" x="290" y="412" width="420" height="62" rx="8"/>
+  <text x="500" y="438" text-anchor="middle">SlotTransport <tspan class="sub">(@fep/protocol/slot)</tspan></text>
+  <text x="500" y="458" text-anchor="middle" class="mono">init() · action(endpoint, body) · tournaments() · stat()</text>
+  <path class="edge" d="M500,372 L500,410" marker-end="url(#b1)"/>
+
+  <rect class="box" x="150" y="520" width="320" height="64" rx="8"/>
+  <text x="310" y="546" text-anchor="middle">createSlotHttpTransport</text>
+  <text x="310" y="566" text-anchor="middle" class="sub">VITE_API_URL + ?sessionKey=</text>
+  <rect class="box" x="530" y="520" width="320" height="64" rx="8"/>
+  <text x="690" y="546" text-anchor="middle">createMockTransport</text>
+  <text x="690" y="566" text-anchor="middle" class="sub">app dev/ · anything else</text>
+  <path class="edge" d="M440,474 L330,518" marker-end="url(#b1)"/>
+  <path class="edge" d="M560,474 L670,518" marker-end="url(#b1)"/>
+
+  <rect class="box ext" x="150" y="600" width="320" height="32" rx="8"/>
+  <text x="310" y="621" text-anchor="middle" class="small">Game Front API — /api/v1/game/{sessionKey}</text>
+  <text x="690" y="621" text-anchor="middle" class="sub">no backend: scripted spins in memory</text>
+  <path class="edge live" d="M310,584 L310,598" marker-end="url(#b1l)"/>
+</svg>
+<div class="legend">
+  <span class="pill react">React</span><span class="pill pixi">Pixi</span><span class="pill core">core / contract</span>
+  <span style="color:var(--ink-2);font-size:13px">dashed border = outside this repo</span>
+</div>
+</div>
+
+<div class="card verdict">
+<strong>The five rules the code is built around</strong>
+<ol>
+  <li><strong>Present after animate.</strong> A result is first <code>pending</code>; the scene lands the reels on it;
+    only then do <code>displayed</code> and <code>balance</code> change. The HUD never shows a win before the reels
+    show it.</li>
+  <li><strong><code>nextStep</code> drives the game.</strong> The client never decides what comes next. Free spins,
+    respins and cascades are played automatically because the server's <code>nextStep</code> says so.</li>
+  <li><strong>Init once per game start.</strong> Each <code>GET /game/{key}</code> rotates the fingerprint; a second
+    tab or a second init locks the first one out (error 112). <code>bootGame</code> runs outside React and
+    <code>start()</code> ignores repeat calls.</li>
+  <li><strong>No blind retries.</strong> A slot action has no idempotency key: after a network failure the client
+    can't know whether the round was played, so it stops (CRITICAL) and a reload restores the truth from
+    <code>lastSpin</code>.</li>
+  <li><strong>Game-specific state stays in the adapter.</strong> <code>game-core</code> sees a generic
+    <code>Round&lt;S&gt;</code>; the 7 variant games will each ship their own <code>StateAdapter</code>.</li>
+</ol>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="layers">2. Packages &amp; layering</h2>
+<p>
+Dependencies only point down; <code>@nx/enforce-module-boundaries</code> checks the tags. Slot code sits on the
+<code>/slot</code> subpath of each package; code every family shares (error classes, error-code tables, balance and
+tournament schemas, session error policy, money formatting) sits at the package root.
+</p>
+<div class="tbl"><table>
+<tr><th>Package</th><th>Tag</th><th>Slot responsibility</th><th>Depends on</th></tr>
+<tr><td><code>apps/games/gameone</code></td><td><span class="pill">type:app</span></td>
+  <td>Boot, transport choice, scene + session wiring, layout, dev mock</td><td>all below</td></tr>
+<tr><td><code>@fep/hud/slot</code></td><td><span class="pill react">type:ui</span></td>
+  <td><code>SlotHud</code>, <code>useSlotHudState</code>; shared <code>Dialog</code> and money utils</td><td>game-core, protocol (types)</td></tr>
+<tr><td><code>@fep/renderer/slot</code></td><td><span class="pill pixi">type:renderer</span></td>
+  <td><code>createSlotScene</code>, reel motion, win-line geometry, <code>connectSpinView</code></td><td>game-core (state type), protocol (types)</td></tr>
+<tr><td><code>@fep/game-core/slot</code></td><td><span class="pill core">type:core</span></td>
+  <td><code>createSlotSession</code>, store, <code>standardStateAdapter</code>, auto-step rules, error policy</td><td>protocol</td></tr>
+<tr><td><code>@fep/protocol/slot</code> + root</td><td><span class="pill core">type:protocol</span></td>
+  <td>Zod schemas of the Game API, <code>SlotTransport</code> type, HTTP transport, error mapping and codes</td><td>zod</td></tr>
+</table></div>
+
+<!-- ============================================================ -->
+<h2 id="boot">3. Boot sequence</h2>
+<p>
+<code>index.html</code> has <code>#game</code> (Pixi canvas) and <code>#root</code> (React HUD on top).
+<code>main.tsx</code> awaits <code>bootGame(#game)</code> and then mounts React. <code>start()</code> isn't awaited,
+so the HUD shows "Loading…" while init is in flight.
+</p>
+
+<div class="card diagram">
+<svg viewBox="0 0 1000 740" role="img" aria-label="Boot sequence between main.tsx, bootGame, SlotSession, SlotScene and the Game API.">
+  <defs>
+    <marker id="b3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker>
+  </defs>
+  <rect class="box" x="20" y="16" width="140" height="44" rx="8"/><text x="90" y="43" text-anchor="middle">main.tsx</text>
+  <rect class="box" x="220" y="16" width="140" height="44" rx="8"/><text x="290" y="43" text-anchor="middle">bootGame (game.ts)</text>
+  <rect class="box core" x="420" y="16" width="140" height="44" rx="8"/><text x="490" y="43" text-anchor="middle">SlotSession</text>
+  <rect class="box pixi" x="620" y="16" width="140" height="44" rx="8"/><text x="690" y="43" text-anchor="middle">SlotScene</text>
+  <rect class="box ext" x="820" y="16" width="140" height="44" rx="8"/><text x="890" y="43" text-anchor="middle">Game API</text>
+  <line class="life" x1="90" y1="60" x2="90" y2="730"/>
+  <line class="life" x1="290" y1="60" x2="290" y2="730"/>
+  <line class="life" x1="490" y1="60" x2="490" y2="730"/>
+  <line class="life" x1="690" y1="60" x2="690" y2="730"/>
+  <line class="life" x1="890" y1="60" x2="890" y2="730"/>
+
+  <path class="edge" d="M90,100 L286,100" marker-end="url(#b3)"/><text x="188" y="93" text-anchor="middle" class="small">1. bootGame(#game)</text>
+  <rect class="note" x="175" y="118" width="230" height="26" rx="4"/><text x="290" y="135" text-anchor="middle" class="small">2. new Application().init(resizeTo)</text>
+  <rect class="note" x="160" y="152" width="260" height="26" rx="4"/><text x="290" y="169" text-anchor="middle" class="small">3. sceneReady promise (present waits on it)</text>
+  <path class="edge" d="M290,206 L486,206" marker-end="url(#b3)"/><text x="388" y="199" text-anchor="middle" class="small">4. createSlotSession({…})</text>
+  <path class="edge" d="M290,240 L486,240" marker-end="url(#b3)"/><text x="388" y="233" text-anchor="middle" class="small">5. store.subscribe + start()</text>
+  <path class="edge dash" d="M290,274 L94,274" marker-end="url(#b3)"/><text x="190" y="267" text-anchor="middle" class="small">6. resolves session</text>
+  <rect class="note" x="10" y="290" width="160" height="26" rx="4"/><text x="90" y="307" text-anchor="middle" class="small">7. render HUD: "Loading…"</text>
+  <path class="edge" d="M490,342 L886,342" marker-end="url(#b3)"/><text x="688" y="335" text-anchor="middle" class="mono">8. GET /api/v1/game/{sessionKey}</text>
+  <path class="edge dash" d="M890,376 L494,376" marker-end="url(#b3)"/><text x="692" y="369" text-anchor="middle" class="small">InitResponse: fingerprint, bets, lines, slot.params, lastSpin, balance…</text>
+  <rect class="note" x="365" y="392" width="250" height="40" rx="4"/>
+  <text x="490" y="409" text-anchor="middle" class="small">9. keep fingerprint (private), set init,</text>
+  <text x="490" y="425" text-anchor="middle" class="small">displayed = adapter.parse(lastSpin), balance</text>
+  <path class="edge dash" d="M490,458 L294,458" marker-end="url(#b3)"/><text x="392" y="451" text-anchor="middle" class="small">10. subscriber: init + displayed</text>
+  <path class="edge" d="M290,492 L686,492" marker-end="url(#b3)"/><text x="488" y="485" text-anchor="middle" class="small">11. createSlotScene({params}) · show(displayed.state)</text>
+  <rect class="note" x="140" y="508" width="300" height="26" rx="4"/><text x="290" y="525" text-anchor="middle" class="small">12. connectSpinView · layout · resolveScene</text>
+  <path class="edge" d="M290,568 L886,568" marker-end="url(#b3)"/><text x="588" y="561" text-anchor="middle" class="mono">13. POST /stat/loaded (errors ignored)</text>
+  <rect class="note" x="355" y="590" width="270" height="40" rx="4"/>
+  <text x="490" y="607" text-anchor="middle" class="small">14. phase idle → run(null): if nextStep is</text>
+  <text x="490" y="623" text-anchor="middle" class="small">an auto step, resume it (e.g. reload mid free spins)</text>
+  <path class="edge dash" d="M490,670 L94,670" marker-end="url(#b3)"/><text x="292" y="663" text-anchor="middle" class="small">15. store change → HUD shows balance, bet, Spin</text>
+</svg>
+</div>
+<div class="card">
+<ul>
+  <li><strong>The scene needs init</strong> (<code>slot.params</code>: reel sizes, symbols, paylines), so it's built in a
+    one-shot store subscription once both <code>init</code> and <code>displayed</code> are set.</li>
+  <li><strong>Resume before the scene exists:</strong> if the player reloads in the middle of free spins,
+    <code>start()</code> will play the next free spin right after init. <code>present</code> awaits the
+    <code>sceneReady</code> promise, so that spin waits for the scene instead of failing.</li>
+  <li><strong>Layout:</strong> the scene is scaled down (never up) to fit the screen minus <code>HUD_HEIGHT = 140</code>
+    px and centred above the HUD, recalculated on renderer resize.</li>
+  <li><strong>Boot failure</strong> isn't caught in <code>main.tsx</code>: a rejected <code>bootGame</code> leaves a blank
+    page (see <a href="#gaps">gaps</a>).</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="launch">4. Launch &amp; transports</h2>
+<div class="tbl"><table>
+<tr><th>Condition</th><th>Transport</th><th>Session key</th></tr>
+<tr><td><code>VITE_API_URL</code> set <em>and</em> <code>?sessionKey=</code> in the URL</td>
+  <td><code>createSlotHttpTransport({baseUrl, sessionKey})</code>, a fresh one per key</td><td>from the URL</td></tr>
+<tr><td>anything else</td><td><code>createMockTransport()</code> (one shared instance)</td><td><code>"mock"</code></td></tr>
+</table></div>
+<p>
+<code>createTransport</code> is a <em>factory</em> (<code>sessionKey → SlotTransport</code>) rather than one transport,
+because operator free spins can hand the game over to a new session mid-play (<code>externalFreespins.nextSessionKey</code>,
+<a href="#special">§15</a>).
+</p>
+<div class="card bad-card">
+<strong>Unlike Crash One</strong>, Game One doesn't check <code>import.meta.env.DEV</code>: a production build opened
+without a <code>sessionKey</code> (or without <code>VITE_API_URL</code>) silently runs the mock with a fake $10,000
+balance. Crash One throws "open the game from the lobby" in that case.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="api">5. The Game API contract (what Game One uses)</h2>
+<p>All schemas in <code>packages/protocol/src/slot/schemas/</code> and <code>common/schemas/</code>. Money is numeric strings;
+reels and rows in <code>reels[].number</code> and payline <code>positions</code> are 1-based.</p>
+<div class="tbl"><table>
+<tr><th>Call</th><th>Body</th><th>Response</th><th>Used by</th></tr>
+<tr><td><code>GET /api/v1/game/{key}</code></td><td>—</td><td><code>InitResponse</code> (may carry <code>errorCode</code> inside a 200)</td><td><code>start()</code>, session handoff</td></tr>
+<tr><td><code>POST …/spin</code></td><td><code>bet, lines, fingerprint</code></td><td>state + wrapper</td><td><code>spin()</code></td></tr>
+<tr><td><code>POST …/buy</code></td><td><code>bet, fingerprint</code></td><td>state + wrapper (usually <code>nextStep: freespin</code>)</td><td><code>buy()</code></td></tr>
+<tr><td><code>POST …/freespin</code> · <code>/respin</code> · <code>/avalanche</code></td><td><code>fingerprint</code></td><td>state + wrapper</td><td>auto steps in <code>run()</code></td></tr>
+<tr><td><code>POST …/bonus</code></td><td><code>variant, fingerprint</code></td><td>state + wrapper</td><td><code>bonus(variant)</code></td></tr>
+<tr><td><code>POST …/jackpot</code> · <code>/getPreviousState</code></td><td><code>fingerprint</code></td><td>state + wrapper</td><td><code>next()</code></td></tr>
+<tr><td><code>POST …/open-field-item</code></td><td><code>col, row, fingerprint</code></td><td>state + wrapper</td><td><code>openFieldItem()</code></td></tr>
+<tr><td><code>GET …/tournaments</code></td><td>—</td><td><code>TournamentsResponse</code></td><td>transport only (no caller yet)</td></tr>
+<tr><td><code>POST …/stat/{action}</code></td><td>any</td><td>empty 200</td><td><code>loaded()</code></td></tr>
+</table></div>
+
+<div class="grid2">
+<div class="card">
+<h3 style="margin-top:0">Action response = game state + wrapper</h3>
+<pre class="shape"><span class="c">game state (gameStateSchema, standard games)</span>
+reels[]        {number, symbols[]}
+bet, lines, totalBet, totalWin
+winLines[]     {number, symbol, win, length, direction}
+<span class="k">mode</span>           "spin" | "freespin"
+currentStep, <span class="k">nextStep</span>
+extra          [] | freespin extra
+multiplier, collectedSymbol, collection
+jackpot?, wheelOfFortune?, jackpotState?
+
+<span class="c">wrapper (actionWrapperSchema)</span>
+<span class="k">balance</span>        {sessionKey, currency, amount}
+externalFreespins?, tournamentStartPopup?,
+tournamentWinnerPopup?</pre>
+</div>
+<div class="card">
+<h3 style="margin-top:0">Init — the parts the client reads</h3>
+<pre class="shape"><span class="k">fingerprint</span>    rotates on every init
+bets[]         allowed bet per line
+lines          active paylines
+bonusCoefficient  buy price, % of total bet
+<span class="k">lastSpin</span>       state to restore (adapter parses)
+<span class="k">slot.params</span>    reelsSizes, symbols, lines (paylines)
+balance, currencyData {currency, rounding}
+locale, externalFreespins
+bonusParameters   keys = /bonus variants
+tournamentStartPopup / WinnerPopup
+errorCode?, errorLevel?, errorMessage?
+<span class="c">109 / 111 / 300 arrive inside the 200</span></pre>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="transport">6. HTTP transport &amp; error mapping</h2>
+<div class="card">
+<ul>
+  <li><code>createSlotHttpTransport({baseUrl, sessionKey, fetch?})</code> builds
+    <code>{baseUrl}/api/v1/game/{encodeURIComponent(sessionKey)}</code> and sends JSON with <code>Accept</code> /
+    <code>Content-Type</code> headers. It's stateless: the <em>session</em> owns the fingerprint and adds it to every body.</li>
+  <li><code>init()</code> and <code>tournaments()</code> are parsed with Zod here; <code>action()</code> returns raw JSON,
+    because its state part is game-specific and only the game's adapter can parse it.</li>
+  <li>Non-2xx responses go through <code>toGameApiError(status, body)</code>, which picks one of the API's error channels:</li>
+</ul>
+<div class="tbl" style="margin:8px 0 0"><table>
+<tr><th>HTTP</th><th>Body</th><th><code>GameApiError.detail.kind</code></th></tr>
+<tr><td>404</td><td>any</td><td><code>not-found</code> (unknown session)</td></tr>
+<tr><td>422</td><td><code>{errorCode, errorLevel, errorMessage}</code></td><td><code>business</code> — the only kind with a level</td></tr>
+<tr><td>422</td><td><code>{error}</code></td><td><code>parse</code> (body wasn't valid JSON)</td></tr>
+<tr><td>400</td><td>violations array</td><td><code>validation</code></td></tr>
+<tr><td>other</td><td>any</td><td><code>unexpected</code></td></tr>
+</table></div>
+<p style="margin-bottom:0">Named codes: <code>ERROR_CODE</code> (shared: 1, 3, 4, 9, 109, 111, 112, 140, 300) and
+<code>SLOT_ERROR_CODE</code> (100–108, 110, 115: a step, bet, lines or mode the current state doesn't allow).</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="store">7. Store</h2>
+<div class="grid2">
+<div class="card">
+<h3 style="margin-top:0"><code>SlotState&lt;S&gt;</code></h3>
+<pre class="shape"><span class="k">phase</span>       "loading" | "idle" | "requesting"
+            | "presenting" | "over"
+<span class="k">init</span>        InitResponse | null
+<span class="k">displayed</span>   Round&lt;S&gt; | null  <span class="c">what the screen shows</span>
+<span class="k">balance</span>     string | null    <span class="c">matches displayed</span>
+<span class="k">pending</span>     Round&lt;S&gt; | null  <span class="c">result being presented</span>
+externalFreespins
+tournamentStartPopup   <span class="c">sticky until dismissed</span>
+tournamentWinnerPopup  <span class="c">sticky until dismissed</span>
+<span class="k">error</span>       SessionError | null
+
+<span class="c">Round&lt;S&gt; = { state: S, nextStep, mode, totalWin }</span></pre>
+</div>
+<div class="card">
+<h3 style="margin-top:0">Why it's shaped like this</h3>
+<ul style="margin:0">
+  <li><strong><code>displayed</code> vs <code>pending</code></strong> is present-after-animate in data form: the server's
+    answer is visible to the renderer (<code>pending</code>) while the HUD still shows the previous round.</li>
+  <li><strong><code>balance</code></strong> is the balance <em>of the displayed round</em>, not the server's latest.</li>
+  <li><strong>The fingerprint is not in the store</strong>: it's a closure variable in the session, so no UI code can
+    read or leak it.</li>
+  <li><strong>Popups are sticky</strong>: a later response with <code>null</code> never hides a popup the player hasn't
+    closed yet.</li>
+</ul>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="round">8. A spin, end to end</h2>
+
+<div class="card diagram">
+<svg viewBox="0 0 1000 720" role="img" aria-label="Spin sequence: HUD calls spin, session sets requesting, the scene starts spinning, the transport posts the spin, the session sets presenting and calls present, the scene lands the reels and shows win lines, then the session commits displayed and balance.">
+  <defs>
+    <marker id="b8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker>
+  </defs>
+  <rect class="box react" x="20" y="16" width="140" height="44" rx="8"/><text x="90" y="43" text-anchor="middle">SlotHud</text>
+  <rect class="box core" x="220" y="16" width="160" height="44" rx="8"/><text x="300" y="43" text-anchor="middle">SlotSession + store</text>
+  <rect class="box pixi" x="440" y="16" width="160" height="44" rx="8"/><text x="520" y="43" text-anchor="middle">SlotScene</text>
+  <rect class="box" x="660" y="16" width="140" height="44" rx="8"/><text x="730" y="43" text-anchor="middle">Transport</text>
+  <rect class="box ext" x="840" y="16" width="140" height="44" rx="8"/><text x="910" y="43" text-anchor="middle">Game API</text>
+  <line class="life" x1="90" y1="60" x2="90" y2="710"/>
+  <line class="life" x1="300" y1="60" x2="300" y2="710"/>
+  <line class="life" x1="520" y1="60" x2="520" y2="710"/>
+  <line class="life" x1="730" y1="60" x2="730" y2="710"/>
+  <line class="life" x1="910" y1="60" x2="910" y2="710"/>
+
+  <path class="edge" d="M90,96 L296,96" marker-end="url(#b8)"/><text x="193" y="89" text-anchor="middle" class="small">1. click Spin → spin(bet)</text>
+  <rect class="note" x="180" y="110" width="240" height="40" rx="4"/>
+  <text x="300" y="127" text-anchor="middle" class="small">2. guard: idle, no error, nextStep spin,</text>
+  <text x="300" y="143" text-anchor="middle" class="small">bet ∈ init.bets, lines integer</text>
+  <rect class="note" x="190" y="160" width="220" height="26" rx="4"/><text x="300" y="177" text-anchor="middle" class="small">3. phase = requesting, error = null</text>
+  <path class="edge" d="M300,206 L516,206" marker-end="url(#b8)"/><text x="408" y="199" text-anchor="middle" class="small">4. connectSpinView → startSpin()</text>
+  <path class="edge" d="M300,240 L726,240" marker-end="url(#b8)"/><text x="513" y="233" text-anchor="middle" class="small">5. action("spin", {bet, lines, fingerprint})</text>
+  <path class="edge" d="M730,274 L906,274" marker-end="url(#b8)"/><text x="818" y="267" text-anchor="middle" class="mono">POST /spin</text>
+  <path class="edge dash" d="M910,308 L734,308" marker-end="url(#b8)"/><text x="822" y="301" text-anchor="middle" class="small">state + wrapper</text>
+  <path class="edge dash" d="M730,342 L304,342" marker-end="url(#b8)"/><text x="517" y="335" text-anchor="middle" class="small">6. raw JSON</text>
+  <rect class="note" x="160" y="356" width="280" height="40" rx="4"/>
+  <text x="300" y="373" text-anchor="middle" class="small">7. actionWrapperSchema.parse + adapter.parse</text>
+  <text x="300" y="389" text-anchor="middle" class="small">phase = presenting, pending = round</text>
+  <path class="edge" d="M300,426 L516,426" marker-end="url(#b8)"/><text x="408" y="419" text-anchor="middle" class="small">8. present(round)</text>
+  <rect class="note" x="400" y="440" width="240" height="56" rx="4"/>
+  <text x="520" y="457" text-anchor="middle" class="small">9. reels stop left → right (≥ 500 ms,</text>
+  <text x="520" y="473" text-anchor="middle" class="small">150 ms apart) · draw win lines</text>
+  <text x="520" y="489" text-anchor="middle" class="small">· hold 900 ms if there are wins</text>
+  <path class="edge dash" d="M520,526 L304,526" marker-end="url(#b8)"/><text x="412" y="519" text-anchor="middle" class="small">10. resolves</text>
+  <rect class="note" x="160" y="542" width="280" height="40" rx="4"/>
+  <text x="300" y="559" text-anchor="middle" class="small">11. commit: phase idle, displayed = round,</text>
+  <text x="300" y="575" text-anchor="middle" class="small">balance, externalFreespins, popups</text>
+  <path class="edge dash" d="M300,612 L94,612" marker-end="url(#b8)"/><text x="197" y="605" text-anchor="middle" class="small">12. HUD: new balance + win</text>
+  <rect class="note" x="160" y="630" width="280" height="40" rx="4"/>
+  <text x="300" y="647" text-anchor="middle" class="small">13. run(): nextStep auto? → play it (no click)</text>
+  <text x="300" y="663" text-anchor="middle" class="small">else stop and wait for the next intent</text>
+</svg>
+</div>
+<div class="card note-card">
+<strong>If the request fails</strong>, the phase goes from <code>requesting</code> straight to <code>idle</code> (ALERT)
+or <code>over</code> (CRITICAL), never through <code>presenting</code>. <code>connectSpinView</code> sees that and lands
+the spinning reels back on <code>displayed</code>, so the screen never shows a result that didn't happen. Starting the
+spin on <code>requesting</code> (step 4) hides the request latency: the reels move the instant the player clicks.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="phases">9. Phases &amp; the nextStep loop</h2>
+
+<div class="card diagram">
+<svg viewBox="0 0 1000 370" role="img" aria-label="Session phase machine: loading to idle, idle to requesting on an intent or auto step, requesting to presenting, presenting back to idle; ALERT and WARNING return to idle; CRITICAL goes to over.">
+  <defs>
+    <marker id="b9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="head"/></marker>
+  </defs>
+  <rect class="box" x="30" y="60" width="160" height="64" rx="32"/><text x="110" y="90" text-anchor="middle">loading</text><text x="110" y="108" text-anchor="middle" class="sub">init in flight</text>
+  <rect class="box react" x="270" y="60" width="160" height="64" rx="32"/><text x="350" y="90" text-anchor="middle">idle</text><text x="350" y="108" text-anchor="middle" class="sub">controls enabled</text>
+  <rect class="box core" x="510" y="60" width="160" height="64" rx="32"/><text x="590" y="90" text-anchor="middle">requesting</text><text x="590" y="108" text-anchor="middle" class="sub">reels spinning</text>
+  <rect class="box pixi" x="750" y="60" width="200" height="64" rx="32"/><text x="850" y="90" text-anchor="middle">presenting</text><text x="850" y="108" text-anchor="middle" class="sub">pending, reels landing</text>
+  <rect class="box bad" x="510" y="290" width="160" height="56" rx="28"/><text x="590" y="316" text-anchor="middle">over</text><text x="590" y="334" text-anchor="middle" class="sub">CRITICAL: reload</text>
+
+  <path class="edge" d="M190,92 L267,92" marker-end="url(#b9)"/><text x="228" y="80" text-anchor="middle" class="small">init ok</text>
+  <path class="edge" d="M430,80 L507,80" marker-end="url(#b9)"/><text x="468" y="48" text-anchor="middle" class="small">intent or</text><text x="468" y="64" text-anchor="middle" class="small">auto step</text>
+  <path class="edge" d="M670,92 L747,92" marker-end="url(#b9)"/><text x="708" y="80" text-anchor="middle" class="small">response</text>
+  <path class="edge dash" d="M507,106 L433,106" marker-end="url(#b9)"/><text x="470" y="140" text-anchor="middle" class="sub">ALERT / WARNING</text>
+  <path class="edge" d="M850,124 C850,240 350,240 350,127" marker-end="url(#b9)"/>
+  <text x="640" y="236" class="small">landed → commit → idle → run() checks nextStep</text>
+  <path class="edge dash" d="M590,124 L590,288" marker-end="url(#b9)"/><text x="600" y="276" class="sub">CRITICAL / no code</text>
+  <path class="edge dash" d="M110,124 C110,320 300,318 507,318" marker-end="url(#b9)"/><text x="136" y="210" class="sub">init CRITICAL</text>
+</svg>
+</div>
+
+<div class="tbl"><table>
+<tr><th><code>nextStep</code></th><th>Who triggers it</th><th>How</th></tr>
+<tr><td><code>spin</code></td><td>player</td><td><code>spin(bet)</code> or <code>buy(bet)</code></td></tr>
+<tr><td><code>freespin</code> · <code>respin</code> · <code>avalanche</code></td><td><strong>automatic</strong> (<code>AUTO_STEPS</code>)</td>
+  <td><code>run()</code> loops: play the step with an empty body, present, commit, check again</td></tr>
+<tr><td><code>bonus</code></td><td>player</td><td><code>bonus(variant)</code>, variant ∈ <code>init.bonusParameters</code></td></tr>
+<tr><td><code>jackpot</code></td><td>player</td><td><code>openFieldItem(col, row)</code> or <code>next()</code></td></tr>
+<tr><td><code>getPreviousState</code></td><td>player</td><td><code>next()</code> — leave the bonus game</td></tr>
+</table></div>
+
+<!-- ============================================================ -->
+<h2 id="session">10. Session &amp; intents</h2>
+<p>
+Every intent returns <code>Promise&lt;boolean&gt;</code>: <code>false</code> means "not allowed now, nothing sent";
+<code>true</code> means it ran (including any auto steps after it). The common gate is
+<code>canPlay(...steps)</code>: phase <code>idle</code>, no open error, a <code>displayed</code> round whose
+<code>nextStep</code> is one of <code>steps</code>.
+</p>
+<div class="tbl"><table>
+<tr><th>Intent</th><th>Allowed when</th><th>Sends</th></tr>
+<tr><td><code>spin(bet, lines = init.lines)</code></td><td><code>canPlay("spin")</code>, <code>bet ∈ init.bets</code>, integer <code>lines</code></td><td><code>/spin</code></td></tr>
+<tr><td><code>buy(bet)</code></td><td><code>canPlay("spin")</code>, <code>bet ∈ init.bets</code></td><td><code>/buy</code></td></tr>
+<tr><td><code>bonus(variant)</code></td><td><code>canPlay("bonus")</code>, variant is a key of <code>bonusParameters</code></td><td><code>/bonus</code></td></tr>
+<tr><td><code>openFieldItem(col, row)</code></td><td><code>canPlay("jackpot")</code>, positive integers</td><td><code>/open-field-item</code></td></tr>
+<tr><td><code>next()</code></td><td>nextStep is <code>jackpot</code> or <code>getPreviousState</code></td><td>that step</td></tr>
+<tr><td><code>dismissError()</code></td><td>not <code>over</code></td><td>clears the error, then <code>run(null)</code> — <strong>resumes</strong> an auto-step chain an ALERT interrupted</td></tr>
+<tr><td><code>dismissPopup("start" | "winner")</code></td><td>always</td><td>—</td></tr>
+<tr><td><code>loaded()</code></td><td>after the scene is ready</td><td><code>/stat/loaded</code>, errors swallowed</td></tr>
+</table></div>
+
+<!-- ============================================================ -->
+<h2 id="adapter">11. State adapters</h2>
+<div class="card">
+<p style="margin-top:0">
+<code>GameState</code> isn't one schema across the catalogue: Space Infinity, Fruit Storm, Shootland, Dark Portal,
+TapTap, Pinball Inferno and Mystic Gates/Charmana each change it. So <code>game-core</code> never parses state itself.
+It calls <code>adapter.parse(raw)</code>, which returns a <code>Round&lt;S&gt;</code>: the game's own state <code>S</code>
+plus the four fields the loop needs (<code>nextStep</code>, <code>mode</code>, <code>totalWin</code>, and the state).
+</p>
+<ul style="margin-bottom:0">
+  <li>Game One uses <code>standardStateAdapter</code> (<code>gameStateSchema</code>), so <code>S = GameState</code>.</li>
+  <li>The same adapter parses both init <code>lastSpin</code> and every action response; the wrapper fields
+    (balance, popups, external free spins) are parsed separately by <code>actionWrapperSchema</code>.</li>
+  <li>A variant game would add <code>apps/games/&lt;sysname&gt;/src/…-state-adapter.ts</code> with its own schema; the
+    HUD and scene are generic over <code>S</code> (the scene currently expects <code>GameState</code>).</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="errors">12. Errors</h2>
+<div class="tbl"><table>
+<tr><th>Source</th><th>Level</th><th>Result</th></tr>
+<tr><td>Business error (422 with code)</td><td>from the response</td>
+  <td>WARNING: <code>onWarning</code> (console), back to idle · ALERT: dialog with OK, back to idle · CRITICAL: phase <code>over</code></td></tr>
+<tr><td>Anything else: network, 404, parse, validation, unexpected, a Zod failure</td><td><span class="pill bad">CRITICAL</span></td>
+  <td>"Session over" dialog with Reload. The client can't tell whether the round was played and the API has no
+  idempotency key, so retrying could play twice. Reload is safe: init restores <code>lastSpin</code>.</td></tr>
+<tr><td>Init reports an error inside its 200 (109 closed, 111 country, 300 language)</td><td>from the payload, default CRITICAL</td>
+  <td>CRITICAL stops before <code>run()</code>; ALERT shows a dialog; WARNING (e.g. 300 language fallback) is logged</td></tr>
+<tr><td>112 opened on another device</td><td>CRITICAL (from the API)</td><td>session over in the old tab</td></tr>
+</table></div>
+
+<!-- ============================================================ -->
+<h2 id="render">13. Rendering the reels</h2>
+<div class="grid2">
+<div class="card">
+<h3 style="margin-top:0">Reel motion (pure, unit tested)</h3>
+<ul style="margin:0">
+  <li><code>ReelMotion</code>: one reel as a <code>strip</code> (a buffer row above + visible rows) and an
+    <code>offset</code> in symbol heights. <code>update(dtMs)</code> accelerates to 18 symbols/s over 150 ms and scrolls;
+    while spinning, random filler enters from the top.</li>
+  <li><code>stop(column)</code> queues the final symbols; they scroll in, and the reel stops hard when the last one is in
+    place. Resolves the "landed" promise.</li>
+  <li><code>ReelSetMotion</code>: all reels, sizes from <code>slot.params.reelsSizes</code>. Stops are scheduled left to
+    right: the first at <code>max(elapsed, 500 ms)</code>, then every 150 ms.</li>
+</ul>
+</div>
+<div class="card">
+<h3 style="margin-top:0">Scene (Pixi)</h3>
+<ul style="margin:0">
+  <li><code>createSlotScene</code>: a 120×120 cell per strip row, masked to the reel window; the ticker calls
+    <code>motion.update</code> then redraws positions and symbols each frame.</li>
+  <li><code>show(state)</code>: reels at rest (init <code>lastSpin</code>). <code>present(state)</code>: start if
+    needed, land on <code>reelColumns(state.reels)</code>, draw win lines, hold 900 ms if any.</li>
+  <li><code>winLineCells</code> maps a win line to cells: payline <code>positions</code> are 1-based rows;
+    <code>direction: "reverse"</code> counts from the right.</li>
+  <li><code>connectSpinView</code> drives start / fallback landing from phase changes (§8).</li>
+</ul>
+</div>
+</div>
+<div class="card note-card">
+<span class="pill warn">placeholder art</span> Symbols are coloured rounded tiles with the symbol name (wild and scatter
+in yellow); no atlases, Spine, big-win timeline or landing bounce yet. Win lines are yellow frames and a polyline.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="hud">14. HUD</h2>
+<div class="card">
+<ul>
+  <li><strong>State</strong> via <code>useSlotHudState</code> (shallow-equal selection): phase, init, balance, and
+    <code>win</code> / <code>mode</code> / <code>nextStep</code> from <code>displayed</code>, error, popups. The HUD
+    re-renders on commits and phase changes, never per frame.</li>
+  <li><strong><code>canPlay</code></strong> = idle ∧ no error ∧ <code>nextStep === "spin"</code>. It gates − / +, Spin
+    and Buy, so controls lock during auto free spins.</li>
+  <li><strong>Bet</strong>: index into <code>init.bets</code> (bet per line); shown as <em>total bet</em> =
+    <code>bet × init.lines</code> with exact decimal maths (<code>multiplyMoney</code>).</li>
+  <li><strong>Win</strong> label reads "Free spins · Win" in free-spin mode; zero shows "—".</li>
+  <li><strong>Buy bonus</strong> appears only with <code>buyFeature</code> (off for Game One): <code>/buy</code> on a game
+    that doesn't sell it ends the session with 102. Price = <code>percentOf(totalBet, bonusCoefficient)</code>.</li>
+  <li><strong>Dialogs</strong>, one at a time by priority: error ("Session over" + Reload, or "Notice" + OK) → tournament
+    start popup → tournament winner popup.</li>
+  <li><strong>Money</strong>: <code>formatMoney</code> with <code>currencyData.currency</code>, <code>rounding</code> and
+    the init locale; amounts never pass through floats (BigInt on scaled units + Intl string input).</li>
+  <li><span class="pill warn">i18n</span> strings are inline English until <code>packages/i18n</code> lands.</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="special">15. Special flows</h2>
+<div class="grid2">
+<div class="card">
+<h3 style="margin-top:0">Free spins</h3>
+<p style="margin:0">A spin or buy returns <code>nextStep: "freespin"</code> and <code>mode: "freespin"</code>.
+<code>run()</code> keeps calling <code>/freespin</code> — present, commit, repeat — until <code>nextStep</code> is back
+to <code>spin</code>. The HUD is locked the whole time because <code>canPlay</code> needs <code>nextStep === "spin"</code>.
+An ALERT mid-chain stops it; "OK" (<code>dismissError</code>) resumes it.</p>
+</div>
+<div class="card">
+<h3 style="margin-top:0">Operator free spins handoff</h3>
+<p style="margin:0">When a response carries <code>externalFreespins.nextSessionKey</code>, the current session is
+closed by the server. <code>run()</code> creates a new transport for that key, runs <code>init()</code> again (new
+fingerprint, new <code>lastSpin</code>) and continues on the new session — no reload needed.</p>
+</div>
+<div class="card">
+<h3 style="margin-top:0">Reload mid-feature</h3>
+<p style="margin:0">Init returns <code>lastSpin</code> with its <code>nextStep</code>. <code>start()</code> calls
+<code>run(null)</code> after init, so an auto step resumes immediately; a user step (bonus, jackpot) waits for the
+player. The scene shows <code>lastSpin</code> at rest first.</p>
+</div>
+<div class="card">
+<h3 style="margin-top:0">Bonus &amp; jackpot</h3>
+<p style="margin:0">The session supports <code>bonus(variant)</code>, <code>openFieldItem</code> and <code>next()</code>,
+but <span class="pill warn">no UI calls them yet</span>: if Game One's server ever returns those steps, the HUD has no
+button for them and stays locked.</p>
+</div>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="vs">16. Slot vs crash at a glance</h2>
+<div class="tbl"><table>
+<tr><th></th><th>Game One (slot)</th><th>Crash One</th></tr>
+<tr><td>Network</td><td>request → response only</td><td>commands + a live SSE stream</td></tr>
+<tr><td>Who drives time</td><td>the client, step by step (<code>nextStep</code>)</td><td>the server's round clock, for everyone</td></tr>
+<tr><td>Presenting</td><td>result held in <code>pending</code> until reels land</td><td>applied as events arrive; curve drawn from server time</td></tr>
+<tr><td>Network failure on an action</td><td>CRITICAL (no idempotency)</td><td>ALERT (<code>requestId</code> makes retry safe)</td></tr>
+<tr><td>Transport choice</td><td>HTTP if <code>VITE_API_URL</code> + key, else mock</td><td>gateway / direct / mock, mock only in dev</td></tr>
+<tr><td>State variants</td><td>per-game <code>StateAdapter</code></td><td>per-provider mapper or gateway connector</td></tr>
+<tr><td>Fingerprint</td><td>held by the session</td><td>held by the direct transport (Provider A only)</td></tr>
+</table></div>
+
+<!-- ============================================================ -->
+<h2 id="files">17. File map</h2>
+<div class="tbl"><table>
+<tr><th>Where</th><th>Files</th></tr>
+<tr><td><code>apps/games/gameone/src</code></td><td><code>main.tsx</code> · <code>game.ts</code> (bootGame, createTransportFactory) ·
+  <code>app/app.tsx</code> · <code>dev/mock-transport.ts</code> · <code>styles.css</code> · <code>assets/</code></td></tr>
+<tr><td><code>packages/protocol/src/slot</code></td><td><code>schemas/</code> init-response, game-state, action-wrapper,
+  standard-action-response, slot, reel, win-line, step, mode, freespin-extra, external-freespins, bet-value, bigwin-steps,
+  field-item · <code>transport/create-slot-http-transport.ts</code> · <code>config/slot-error-code.ts</code> · <code>types/</code></td></tr>
+<tr><td><code>packages/protocol/src/common</code></td><td><code>errors/game-api-error.ts</code> · <code>utils/to-game-api-error.ts</code> ·
+  <code>config/error-code.ts</code> · <code>schemas/</code> balance, business/parse/validation error, tournaments, numeric-string</td></tr>
+<tr><td><code>packages/game-core/src</code></td><td><code>slot/session/create-slot-session.ts</code> · <code>slot/adapters/standard-state-adapter.ts</code> ·
+  <code>slot/constants/auto-steps.ts</code> · <code>slot/utils/is-auto-step.ts</code> · <code>slot/types/</code> ·
+  <code>store/create-slot-store.ts</code>, <code>constants/initial-slot-state.ts</code>, <code>types/slot-*.type.ts</code> ·
+  <code>common/utils/to-session-error.ts</code></td></tr>
+<tr><td><code>packages/renderer/src</code></td><td><code>slot/slot-scene.ts</code> · <code>slot/reel-motion.ts</code> ·
+  <code>slot/win-lines.ts</code> · <code>store/connect-spin-view.ts</code>, <code>types/spin-view.type.ts</code></td></tr>
+<tr><td><code>packages/hud/src</code></td><td><code>slot/slot-hud.tsx</code>, <code>slot-hud.module.css</code> ·
+  <code>store/use-slot-hud-state.ts</code> · <code>common/components/dialog.tsx</code> · <code>common/utils/money.ts</code></td></tr>
+</table></div>
+
+<!-- ============================================================ -->
+<h2 id="testing">18. Testing</h2>
+<div class="card">
+<p style="margin-top:0">11 spec files next to the code (Vitest; React Testing Library for the HUD and app). Protocol and
+session tests use the JSON examples from <code>docs/Test Game Front API.md</code>.</p>
+<ul>
+  <li><strong>protocol</strong>: <code>schemas.spec</code> (doc examples), <code>create-slot-http-transport</code>
+    (fake fetch), <code>to-game-api-error</code>, <code>tournaments-response.schema</code>.</li>
+  <li><strong>game-core</strong>: <code>create-slot-session</code> — the full request → present → commit loop, auto steps,
+    handoff, errors, intent guards — with a fake transport.</li>
+  <li><strong>renderer</strong>: <code>reel-motion</code>, <code>win-lines</code>, <code>connect-spin-view</code>.</li>
+  <li><strong>hud</strong>: <code>slot-hud</code>, <code>money</code>. <strong>app</strong>: <code>app.spec</code>.</li>
+</ul>
+<p style="margin-bottom:0">Coverage floor 80% per project; Pixi scene files excluded. No Playwright smoke for a spin
+cycle yet (planned).</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="run">19. Running it</h2>
+<div class="tbl"><table>
+<tr><th>Mode</th><th>How</th><th>What you get</th></tr>
+<tr><td>Dev mock</td><td><code>bun run serve:gameone</code> → <code>http://localhost:4300/</code></td>
+  <td>Base-game spins only, $10,000; every third spin wins (three sym3 on payline 6). Other endpoints throw.</td></tr>
+<tr><td>Postman mock</td><td><code>apps/games/gameone/.env.local</code>:
+  <code>VITE_API_URL=https://42cb5436-0184-4d10-896e-c71cd9c47f8e.mock.pstmn.io</code> →
+  <code>?sessionKey=slot-demo</code></td>
+  <td>The real HTTP transport against the API doc's examples: init, spin (fixed result), stat. Buy and free-spin examples are in the collection too, but Game One hides the Buy button.</td></tr>
+<tr><td>Game API</td><td><code>VITE_API_URL</code> = the API, <code>?sessionKey=…</code> from a real launch</td><td>Real session</td></tr>
+</table></div>
+
+<!-- ============================================================ -->
+<h2 id="gaps">20. Gaps &amp; risks</h2>
+<div class="tbl"><table>
+<tr><th>Area</th><th>Gap</th><th>Where</th><th>Impact / next step</th></tr>
+<tr><td>Production fallback</td><td>No <code>DEV</code> check: missing key or env silently runs the mock</td><td><code>game.ts</code> createTransportFactory</td>
+  <td>A misconfigured production build shows fake money. Mirror Crash One's <code>readLaunchConfig</code>.</td></tr>
+<tr><td>Boot failure</td><td><code>bootGame</code> rejection not handled</td><td><code>main.tsx</code></td><td>Blank page. Render the error as Crash One does.</td></tr>
+<tr><td>Bonus / jackpot UI</td><td>Intents exist, no HUD controls</td><td><code>slot-hud.tsx</code></td><td>A <code>bonus</code> / <code>jackpot</code> / <code>getPreviousState</code> step locks the game.</td></tr>
+<tr><td>Tournaments</td><td><code>transport.tournaments()</code> has no caller; only popups are shown</td><td>session, HUD</td><td>No leaderboard screen yet.</td></tr>
+<tr><td>Art &amp; motion</td><td>Placeholder tiles, hard stop, no big win (<code>bigwin</code> params unused)</td><td><code>slot-scene.ts</code>, <code>reel-motion.ts</code></td><td>Atlases, Spine, GSAP bounce and big-win timeline per game.</td></tr>
+<tr><td>Variant games</td><td>Only the standard adapter exists; scene typed to <code>GameState</code></td><td><code>game-core/slot/adapters</code>, renderer</td><td>Each of the 7 variants needs an adapter (and scene support).</td></tr>
+<tr><td>i18n</td><td>English inline; <code>translationsUrl</code> unused</td><td>HUD</td><td>Wire <code>@fep/i18n</code>.</td></tr>
+<tr><td>Spin options</td><td><code>spinSpeed</code>, <code>currentMode</code>, <code>strength</code>, <code>tapsCount</code> never sent</td><td>session</td><td>Fine for Game One; needed for TapTap / Dark Portal.</td></tr>
+<tr><td>Dev mock</td><td>Only <code>/spin</code> scripted</td><td><code>dev/mock-transport.ts</code></td><td>Use the Postman mock for buy / free spins.</td></tr>
+<tr><td>E2E</td><td>No Playwright spin-cycle smoke</td><td>—</td><td>Planned in the tech stack.</td></tr>
+</table></div>
+
+<footer>
+Generated from the code on 2026-11-26. If this page and the code disagree, the code wins — update this page. Related:
+<a href="frontend-architecture.html">frontend-architecture.html</a>, <a href="index.html">index.html</a> (Game Front API
+architecture), <a href="Test%20Game%20Front%20API.md">Test Game Front API.md</a>,
+<a href="crashone-architecture.html">crashone-architecture.html</a>.
+</footer>
+</main>
+</body>
+</html>
