@@ -13,6 +13,9 @@ export default defineConfig(() => ({
         coverage: {
             reportsDirectory: "./test-output/vitest/coverage",
             provider: "v8" as const,
+            // Pixi scenes need WebGL: checked in the browser (serve the game apps), not unit tested. Their per-frame
+            // logic lives in plain modules that are.
+            exclude: ["src/**/*-scene.ts", "src/**/scene/**"],
             thresholds: { statements: 80, branches: 80, functions: 80, lines: 80 },
         },
     },
