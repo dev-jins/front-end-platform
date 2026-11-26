@@ -3,15 +3,21 @@ import { readLaunchConfig } from "./read-launch-config";
 const env = { VITE_GATEWAY_URL: "https://gw.example.com", VITE_API_URL: "https://api.example.com" };
 
 describe("readLaunchConfig", () => {
-    it("launchToken → gateway, from env or ?gatewayUrl=", () => {
+    it("launchToken → gateway, from env; ?gatewayUrl= overrides it only in dev", () => {
         expect(readLaunchConfig("?launchToken=lt", env, false)).toEqual({
             transport: "gateway",
             gatewayUrl: "https://gw.example.com",
             launchToken: "lt",
         });
-        expect(readLaunchConfig("?launchToken=lt&gatewayUrl=https://other", {}, false)).toMatchObject({
+        expect(readLaunchConfig("?launchToken=lt&gatewayUrl=https://other", env, true)).toMatchObject({
             gatewayUrl: "https://other",
         });
+        expect(readLaunchConfig("?launchToken=lt&gatewayUrl=https://attacker", env, false)).toMatchObject({
+            gatewayUrl: "https://gw.example.com",
+        });
+        expect(() => readLaunchConfig("?launchToken=lt&gatewayUrl=https://attacker", {}, false)).toThrow(
+            "VITE_GATEWAY_URL"
+        );
     });
 
     it("sessionKey → Provider A direct, demo flag", () => {

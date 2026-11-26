@@ -13,7 +13,7 @@ The URL the lobby opens picks the transport; nothing else in the app knows which
 
 | URL                                | Transport                                     | Needs                                    |
 | ---------------------------------- | --------------------------------------------- | ---------------------------------------- |
-| `?launchToken=…`                   | gateway (`createGatewayCrashTransport`)       | `VITE_GATEWAY_URL` or `&gatewayUrl=`     |
+| `?launchToken=…`                   | gateway (`createGatewayCrashTransport`)       | `VITE_GATEWAY_URL` (`&gatewayUrl=` overrides it in dev builds only) |
 | `?sessionKey=…` (`&demo=1`)        | Provider A direct (`createDirectCrashTransport`) | `VITE_API_URL`; ids, limits, capabilities from `src/config/provider-a-game-config.ts` (placeholders, TODO) |
 | nothing                            | dev mock                                      | dev build only — a production build errors instead of showing fake money |
 

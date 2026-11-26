@@ -3,7 +3,7 @@ import type { LaunchEnv } from "./types/launch-env.type";
 
 /**
  * Launch config from the game URL the lobby opened, plus build env:
- * - `?launchToken=…` → gateway (`VITE_GATEWAY_URL`, or `?gatewayUrl=`);
+ * - `?launchToken=…` → gateway (`VITE_GATEWAY_URL`; `?gatewayUrl=` overrides it in dev builds only);
  * - `?sessionKey=…` → Provider A direct (`VITE_API_URL`), `&demo=1` for a demo session;
  * - nothing → the dev mock, only in a dev build, so a production build never shows fake money.
  * Throws when a mode is asked for but cannot be set up.
@@ -14,8 +14,9 @@ export function readLaunchConfig(search: string, env: LaunchEnv, dev: boolean): 
     const sessionKey = params.get("sessionKey");
 
     if (launchToken) {
-        const gatewayUrl = params.get("gatewayUrl") ?? env.VITE_GATEWAY_URL;
-        if (!gatewayUrl) throw new Error("Launch config: a launchToken needs VITE_GATEWAY_URL or ?gatewayUrl=");
+        // Never from the URL in production: a crafted link would send the launch token to any host and trust its answers.
+        const gatewayUrl = (dev ? params.get("gatewayUrl") : null) ?? env.VITE_GATEWAY_URL;
+        if (!gatewayUrl) throw new Error("Launch config: a launchToken needs VITE_GATEWAY_URL");
         return { transport: "gateway", gatewayUrl, launchToken };
     }
     if (sessionKey) {
