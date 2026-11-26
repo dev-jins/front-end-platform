@@ -73,3 +73,30 @@
     outline: 3px solid #fde047;
     outline-offset: 2px;
 }
+
+/* Jackpot field in the step dialog: `.field .cell` outranks the dialog's generic button style. */
+.field {
+    display: grid;
+    gap: 8px;
+    justify-content: center;
+}
+
+.field .cell {
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border-radius: 8px;
+    background: #334155;
+    color: #f8fafc;
+}
+
+.field .cell:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.field .opened:disabled {
+    opacity: 1;
+    background: #f59e0b;
+    color: #451a03;
+}

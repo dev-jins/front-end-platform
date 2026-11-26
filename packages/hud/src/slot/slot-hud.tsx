@@ -5,6 +5,7 @@ import { Dialog } from "../common/components/dialog";
 import { formatMoney, isZeroMoney, multiplyMoney, percentOf } from "../common/utils/money";
 import { useSlotHudState } from "../store/use-slot-hud-state";
 import styles from "./slot-hud.module.css";
+import { StepDialog } from "./step-dialog";
 
 export interface SlotHudProps<S> {
     session: SlotSession<S>;
@@ -18,7 +19,7 @@ const reloadPage = () => window.location.reload();
 
 // ponytail: English strings inline; switch to i18n keys when packages/i18n lands.
 export function SlotHud<S>({ session, buyFeature = false, onReload = reloadPage }: SlotHudProps<S>) {
-    const { phase, init, balance, win, mode, nextStep, error, startPopup, winnerPopup } = useSlotHudState(
+    const { phase, init, balance, win, mode, nextStep, jackpotState, error, startPopup, winnerPopup } = useSlotHudState(
         session.store
     );
     const [betIndex, setBetIndex] = useState(0);
@@ -142,7 +143,15 @@ export function SlotHud<S>({ session, buyFeature = false, onReload = reloadPage 
                         OK
                     </button>
                 </Dialog>
-            ) : null}
+            ) : (
+                <StepDialog
+                    session={session}
+                    init={init}
+                    nextStep={nextStep}
+                    jackpotState={jackpotState}
+                    canAct={phase === "idle"}
+                />
+            )}
         </>
     );
 }

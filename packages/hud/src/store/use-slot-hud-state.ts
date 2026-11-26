@@ -15,6 +15,7 @@ export const useSlotHudState = <S>(store: StoreApi<SlotState<S>>): SlotHudState<
             win: s.displayed?.totalWin ?? null,
             mode: s.displayed?.mode ?? null,
             nextStep: s.displayed?.nextStep ?? null,
+            jackpotState: s.displayed?.jackpotState ?? null,
             error: s.error,
             startPopup: s.tournamentStartPopup,
             winnerPopup: s.tournamentWinnerPopup,
